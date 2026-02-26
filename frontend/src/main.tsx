@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, BookText, Building2, FileSpreadsheet, FileText, Home, Package, Plus, Settings, Users, Wrench } from 'lucide-react'
 import { Toaster } from 'sonner'
-
 import './index.css'
 import { Button } from '@/components/ui/button'
 import { Combobox } from '@/components/ui/combobox'
@@ -93,39 +92,29 @@ function Shell({ children }: { children: React.ReactNode }) {
     { to: '/exports', label: t('exports'), icon: <FileSpreadsheet size={16} /> },
     { to: '/settings', label: t('settings'), icon: <Settings size={16} /> },
   ]
-  return (
-    <div className='min-h-screen bg-[#f6f7f9] text-slate-900'>
-      <Toaster richColors position='top-right' />
-      <div className='mx-auto grid min-h-screen max-w-[1440px] grid-cols-1 md:grid-cols-[230px_1fr]'>
-        <aside className='border-r border-slate-200 bg-[#f8f8f8] p-4'>
-          <div className='mb-6 flex items-center gap-2 px-2'><div className='rounded-lg bg-slate-900 p-1.5 text-white'><Wrench size={15} /></div><div><p className='text-sm font-semibold'>DEMART</p><p className='text-xs text-slate-500'>Valve Services</p></div></div>
-          <nav className='space-y-1'>{menu.map((item) => <Link key={item.to} to={item.to} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${pathname.startsWith(item.to) ? 'bg-white shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:bg-white/80'}`}>{item.icon}{item.label}</Link>)}</nav>
-        </aside>
-        <main className='p-6 md:p-8'>
-          <header className='mb-6 flex items-center justify-between'>
-            <Link to='/reports/new'><Button><Plus size={14} className='mr-1' />{t('newReport')}</Button></Link>
-            <div className='flex items-center gap-2'><span className='text-sm text-slate-500'>{t('language')}</span><Button variant={lang === 'tr' ? 'default' : 'secondary'} className='h-9 px-3' onClick={() => setLang('tr')}>TR</Button><Button variant={lang === 'en' ? 'default' : 'secondary'} className='h-9 px-3' onClick={() => setLang('en')}>EN</Button></div>
-          </header>
-          {children}
-        </main>
-      </div>
+return (
+  <div className='min-h-screen bg-[#f6f7f9] text-slate-900'>
+    <Toaster richColors position='top-right' />
+    <div className='mx-auto grid min-h-screen max-w-[1440px] grid-cols-1 md:grid-cols-[230px_1fr]'>
+      <aside className='border-r border-slate-200 bg-[#f8f8f8] p-4'>
+        <div className='mb-6 px-2'><img src='/demart-logo.svg' alt='Demart Logo' className='h-14 w-auto' /></div>
+        <nav className='space-y-1'>{menu.map((item) => <Link key={item.to} to={item.to} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${pathname.startsWith(item.to) ? 'bg-white shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:bg-white/80'}`}>{item.icon}{item.label}</Link>)}</nav>
+      </aside>
+      <main className='p-6 md:p-8'>
+        <header className='mb-6 flex items-center justify-between'>
+          <Link to='/reports/new'><Button><Plus size={14} className='mr-1' />{t('newReport')}</Button></Link>
+          <div className='flex items-center gap-2'><span className='text-sm text-slate-500'>{t('language')}</span><Button variant={lang === 'tr' ? 'default' : 'secondary'} className='h-9 px-3' onClick={() => setLang('tr')}>TR</Button><Button variant={lang === 'en' ? 'default' : 'secondary'} className='h-9 px-3' onClick={() => setLang('en')}>EN</Button></div>
+        </header>
+        {children}
+      </main>
     </div>
-  )
-}
+  </div>
+)
 
 function DashboardPage() {
   const [kpi, setKpi] = React.useState<any>({})
   React.useEffect(() => { void api('/api/dashboard/kpis').then((v) => setKpi(v as any)).catch(() => setKpi({})) }, [])
-  return <section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70 text-sm'>{JSON.stringify(kpi)}</section>
-}
-
-function SimpleCrudPage({ title, endpoint, fields }: { title: string; endpoint: string; fields: Array<{ key: string; label: string }> }) {
-  const { t } = useI18n()
-  const [items, setItems] = React.useState<any[]>([])
-  const [form, setForm] = React.useState<Record<string, string>>({})
-  const load = () => api<any[]>(endpoint).then(setItems).catch(() => setItems([]))
-  React.useEffect(() => { void load() }, [endpoint])
-  return <div className='grid gap-6 lg:grid-cols-[1fr_360px]'><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><h1 className='mb-4 text-2xl font-semibold'>{title}</h1><div className='space-y-3'>{items.length ? items.map((it) => <div key={it.id} className='rounded-xl border border-slate-200 p-3 text-sm'>{JSON.stringify(it)}</div>) : <p className='text-sm text-slate-500'>{t('empty')}</p>}</div></section><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><div className='space-y-3'>{fields.map((f) => <div key={f.key}><Label>{f.label}</Label><Input value={form[f.key] || ''} onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))} /></div>)}<Button onClick={async () => { await api(endpoint, { method: 'POST', body: JSON.stringify(form) }); setForm({}); load() }}>{t('save')}</Button></div></section></div>
+  return <section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70 text-sm'><div className='mb-4 flex items-center gap-3'><img src='/demart-logo.svg' alt='Demart Logo' className='h-10 w-auto' /><span className='text-slate-500'>Demart - Servis Raporlama</span></div>{JSON.stringify(kpi)}</section>
 }
 
 function ActionLibraryPage() {

@@ -8,7 +8,7 @@ docker compose up -d --build
 ```
 
 ## URL'ler
-- Frontend: http://localhost:5173
+- Frontend: http://localhost:3020
 - Backend Docs: http://localhost:8000/docs
 - MinIO Console: http://localhost:9001
 
@@ -67,3 +67,14 @@ Aşağıdaki çağrılarla dosyaları lokalde üretip doğrulayın:
 - PDF: `POST /api/reports/{REPORT_ID}/export/pdf`
 - Excel (external): `POST /api/reports/{REPORT_ID}/export/excel` `{"type":"external"}`
 - Excel (internal): `POST /api/reports/{REPORT_ID}/export/excel` `{"type":"internal"}`
+
+
+## Sorun giderme
+- Backend açılmıyor ve logda `gobject-2.0-0` hatası görüyorsanız image eski olabilir. Yeniden build edin:
+```bash
+docker compose down --remove-orphans
+docker compose build --no-cache backend
+docker compose up -d
+docker compose logs backend --tail=200
+```
+- Frontend portu artık **3020**. 5173 görüyorsanız eski container çalışıyordur; `docker compose down --remove-orphans` sonrası tekrar `up -d --build` yapın.

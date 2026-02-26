@@ -43,7 +43,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "5173:5173"
+      - "3020:3020"
 
 volumes:
   mongo_data:
