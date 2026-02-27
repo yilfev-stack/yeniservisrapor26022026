@@ -236,6 +236,7 @@ function CustomersPage() {
     setEditing(false)
   }
 
+
   const validate = () => {
     if (!form.name.trim()) return 'Müşteri adı zorunlu.'
     if (!form.shipping_address.trim()) return 'Sevk adresi zorunlu.'
@@ -432,6 +433,8 @@ function ProductsPage() {
   const [editing, setEditing] = React.useState(true)
   const [options, setOptions] = React.useState<ProductOptionLists>(defaultProductOptions)
   const [newAccessoryKey, setNewAccessoryKey] = React.useState('')
+  const [newBrandName, setNewBrandName] = React.useState('')
+  const [newModelName, setNewModelName] = React.useState('')
 
   const loadRows = React.useCallback(async () => {
     try { setRows(await api<any[]>('/api/products')) } catch { setRows([]) }
@@ -530,6 +533,30 @@ function ProductsPage() {
     setNewAccessoryKey('')
   }
 
+
+  const createBrand = async () => {
+    const name = newBrandName.trim()
+    if (!name) return toast.error('Marka adı girin')
+    const created = await api<{ id: string }>('/api/brands', { method: 'POST', body: JSON.stringify({ name }) })
+    const updated = await api<any[]>('/api/brands')
+    setBrands(updated)
+    setForm((p) => ({ ...p, brand_id: created.id, model_id: '' }))
+    setNewBrandName('')
+    toast.success('Marka eklendi')
+  }
+
+  const createModel = async () => {
+    const name = newModelName.trim()
+    if (!form.brand_id) return toast.error('Önce marka seçin')
+    if (!name) return toast.error('Model adı girin')
+    const created = await api<{ id: string }>(`/api/brands/${form.brand_id}/models`, { method: 'POST', body: JSON.stringify({ brand_id: form.brand_id, name }) })
+    const updated = await api<any[]>(`/api/models?brand_id=${encodeURIComponent(form.brand_id)}`)
+    setModels(updated)
+    setForm((p) => ({ ...p, model_id: created.id }))
+    setNewModelName('')
+    toast.success('Model eklendi')
+  }
+
   const validate = () => {
     if (!form.brand_id) return 'Marka zorunlu.'
     if (!form.model_id) return 'Model zorunlu.'
@@ -566,8 +593,8 @@ function ProductsPage() {
     <section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'>
       <div className='grid gap-3 md:grid-cols-2'>
         <div className='md:col-span-2'><Label>Müşteri (Opsiyonel)</Label><select disabled={!editing} className='h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm' value={form.customer_id} onChange={(e) => setForm((p) => ({ ...p, customer_id: e.target.value }))}><option value=''>Seçiniz...</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-        <div><Label>Marka *</Label><select disabled={!editing} className='h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm' value={form.brand_id} onChange={(e) => setForm((p) => ({ ...p, brand_id: e.target.value, model_id: '' }))}><option value=''>Marka seçiniz...</option>{brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
-        <div><Label>Model *</Label><select disabled={!editing} className='h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm' value={form.model_id} onChange={(e) => setForm((p) => ({ ...p, model_id: e.target.value }))}><option value=''>Model seçiniz...</option>{models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
+        <div><Label>Marka *</Label><select disabled={!editing} className='h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm' value={form.brand_id} onChange={(e) => setForm((p) => ({ ...p, brand_id: e.target.value, model_id: '' }))}><option value=''>Marka seçiniz...</option>{brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select><div className='mt-2 flex gap-2'><Input disabled={!editing} value={newBrandName} onChange={(e) => setNewBrandName(e.target.value)} placeholder='Yeni marka girin' /><Button disabled={!editing} variant='secondary' onClick={() => { void createBrand() }}>Marka Ekle</Button></div></div>
+        <div><Label>Model *</Label><select disabled={!editing} className='h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm' value={form.model_id} onChange={(e) => setForm((p) => ({ ...p, model_id: e.target.value }))}><option value=''>Model seçiniz...</option>{models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select><div className='mt-2 flex gap-2'><Input disabled={!editing} value={newModelName} onChange={(e) => setNewModelName(e.target.value)} placeholder='Yeni model girin' /><Button disabled={!editing} variant='secondary' onClick={() => { void createModel() }}>Model Ekle</Button></div></div>
 
         <div className='md:col-span-2'><Label>Tip *</Label><div className='flex gap-2'><Input list='type-options' disabled={!editing} value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))} placeholder='Örn: Actuated Butterfly Valve' /><Button disabled={!editing} onClick={() => { void saveSingleOption('type', form.type) }}>Kaydet</Button></div><datalist id='type-options'>{options.type.map((v) => <option key={v} value={v} />)}</datalist></div>
         <div><Label>DN/NPS</Label><div className='flex gap-2'><Input list='size-options' disabled={!editing} value={form.size} onChange={(e) => setForm((p) => ({ ...p, size: e.target.value }))} /><Button disabled={!editing} onClick={() => { void saveSingleOption('size', form.size) }}>Kaydet</Button></div><datalist id='size-options'>{options.size.map((v) => <option key={v} value={v} />)}</datalist></div>
