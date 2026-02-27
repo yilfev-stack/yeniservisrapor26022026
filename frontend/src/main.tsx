@@ -73,8 +73,20 @@ const dict: Dict = {
 const I18nContext = React.createContext<{ lang: Lang; setLang: (l: Lang) => void; t: (k: string) => string }>({ lang: 'tr', setLang: () => undefined, t: (k) => k })
 const useI18n = () => React.useContext(I18nContext)
 
+const API_BASE = (typeof window !== 'undefined' ? (window as any).__API_BASE : '') || ''
+
+function resolveApiUrl(path: string): string {
+  if (/^https?:\/\//.test(path)) return path
+  if (!path.startsWith('/')) return path
+  if (API_BASE) return `${API_BASE}${path}`
+  if (typeof window !== 'undefined' && path.startsWith('/api') && ['3020', '4173'].includes(window.location.port)) {
+    return `${window.location.protocol}//${window.location.hostname}:8000${path}`
+  }
+  return path
+}
+
 async function api<T = unknown>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, { headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) }, ...init })
+  const res = await fetch(resolveApiUrl(path), { headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) }, ...init })
   if (!res.ok) throw new Error(await res.text())
   return res.json()
 }
