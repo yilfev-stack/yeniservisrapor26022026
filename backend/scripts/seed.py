@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 
 from pymongo import MongoClient
 
+from app.action_library_seed import SEED_ACTIONS
+
 client = MongoClient('mongodb://mongodb:27017')
 db = client['demart']
 
@@ -68,42 +70,7 @@ product_id = db.products.insert_one(
     }
 ).inserted_id
 
-seed_actions = [
-    ('valve', 'overhaul', 'Vana komple demonte edilerek tüm iç trim bileşenleri ayrıştırıldı.', 'The valve was fully disassembled and all internal trim components were separated.'),
-    ('valve', 'overhaul', 'Gövde iç yüzeyleri korozyon/erozyon açısından incelendi.', 'Body internal surfaces were inspected for corrosion and erosion.'),
-    ('valve', 'overhaul', 'Seat–plug sızdırmazlık yüzeylerinde laplama işlemi uygulandı.', 'Lapping was applied on seat-plug sealing surfaces.'),
-    ('valve', 'overhaul', 'Salmastra seti yenilendi.', 'Packing set was replaced.'),
-    ('valve', 'overhaul', 'Gövde contası yenilendi.', 'Body gasket was replaced.'),
-    ('valve', 'overhaul', 'O-ring ve sızdırmazlık elemanları değiştirildi.', 'O-rings and sealing elements were replaced.'),
-    ('valve', 'overhaul', 'Kumlama işlemi uygulandı.', 'Sandblasting process was applied.'),
-    ('valve', 'overhaul', 'Yüzey hazırlığı sonrası astar ve son kat boya uygulandı.', 'Primer and final coat paint were applied after surface preparation.'),
-    ('valve', 'overhaul', 'Vana yeniden monte edildi.', 'Valve was reassembled.'),
-    ('valve', 'overhaul', 'Sızdırmazlık testi gerçekleştirildi.', 'Seat leakage test was performed.'),
-    ('valve', 'overhaul', 'Fonksiyonel strok testi yapıldı.', 'Functional stroke test was completed.'),
-    ('valve', 'overhaul', 'Nihai görsel kontrol yapılarak sevke hazırlandı.', 'Final visual inspection was completed and unit prepared for dispatch.'),
-    ('actuator_pneumatic', 'service', 'Aktüatör demonte edildi.', 'Actuator was disassembled.'),
-    ('actuator_pneumatic', 'service', 'Diyafram kontrol edildi/değiştirildi.', 'Diaphragm was inspected/replaced.'),
-    ('actuator_pneumatic', 'service', 'Keçeler ve O-ringler yenilendi.', 'Seals and O-rings were renewed.'),
-    ('actuator_pneumatic', 'service', 'Bench set ayarı yapıldı.', 'Bench set adjustment was completed.'),
-    ('actuator_pneumatic', 'service', 'Hava kaçak testi gerçekleştirildi.', 'Air leakage test was performed.'),
-    ('actuator_pneumatic', 'service', 'Fonksiyon testi yapıldı.', 'Functional test was completed.'),
-    ('actuator_electric', 'service', 'İç temizlik yapıldı.', 'Internal cleaning was completed.'),
-    ('actuator_electric', 'service', 'Dişli kutusu kontrol edildi.', 'Gearbox was inspected.'),
-    ('actuator_electric', 'service', 'Gres yenilendi.', 'Grease was renewed.'),
-    ('actuator_electric', 'service', 'Limit switch ayarları kontrol edildi.', 'Limit switch settings were checked.'),
-    ('actuator_electric', 'service', 'Elektriksel fonksiyon testi yapıldı.', 'Electrical functional test was completed.'),
-    ('positioner', 'calibration', 'Pozisyoner demonte edilerek temizlendi.', 'Positioner was disassembled and cleaned.'),
-    ('positioner', 'calibration', 'Nozzle–flapper mekanizması kontrol edildi.', 'Nozzle-flapper mechanism was checked.'),
-    ('positioner', 'calibration', 'Zero/span kalibrasyonu yapıldı.', 'Zero/span calibration was completed.'),
-    ('positioner', 'calibration', 'Sinyal–pozisyon doğrulaması gerçekleştirildi.', 'Signal-position verification was completed.'),
-    ('positioner', 'calibration', 'Stroking testi yapıldı.', 'Stroking test was completed.'),
-    ('accessory', 'checklist', 'Solenoid kontrol edildi/değiştirildi.', 'Solenoid was inspected/replaced.'),
-    ('accessory', 'checklist', 'Limit switch ayarlandı.', 'Limit switch was adjusted.'),
-    ('accessory', 'checklist', 'AFR filtre değiştirildi.', 'AFR filter was replaced.'),
-    ('accessory', 'checklist', 'I/P converter kontrol edildi.', 'I/P converter was checked.'),
-]
-
-for idx, (scope, category, tr, en) in enumerate(seed_actions, start=1):
+for idx, (scope, category, tr, en) in enumerate(SEED_ACTIONS, start=1):
     db.action_library.insert_one(
         {
             'scope': scope,
