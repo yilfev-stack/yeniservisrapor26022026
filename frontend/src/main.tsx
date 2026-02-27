@@ -110,6 +110,7 @@ return (
     </div>
   </div>
 )
+}
 
 function DashboardPage() {
   const [kpi, setKpi] = React.useState<any>({})
@@ -124,6 +125,34 @@ function ActionLibraryPage() {
   const load = async () => setItems(await api<any[]>(`/api/action-library${valveType ? `?valve_type=${encodeURIComponent(valveType)}` : ''}`))
   React.useEffect(() => { void load().catch(() => setItems([])) }, [valveType])
   return <section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70 space-y-3'><Label>{t('valveType')}</Label><Input value={valveType} onChange={(e) => setValveType(e.target.value)} /><div className='space-y-2'>{items.map((i) => <div key={i.id} className='rounded-lg border border-slate-200 p-3 text-sm'>{i.scope} · {i.valve_type || '-'} · {i.title_tr}</div>)}</div></section>
+}
+
+
+type CrudField = { key: string; label: string }
+
+function SimpleCrudPage({ title, endpoint, fields }: { title: string; endpoint: string; fields: CrudField[] }) {
+  const { t } = useI18n()
+  const [rows, setRows] = React.useState<any[]>([])
+  const [form, setForm] = React.useState<Record<string, string>>(() => Object.fromEntries(fields.map((f) => [f.key, ''])))
+
+  const load = React.useCallback(async () => {
+    try {
+      setRows(await api<any[]>(endpoint))
+    } catch {
+      setRows([])
+    }
+  }, [endpoint])
+
+  React.useEffect(() => { void load() }, [load])
+
+  const create = async () => {
+    await api(endpoint, { method: 'POST', body: JSON.stringify(form) })
+    setForm(Object.fromEntries(fields.map((f) => [f.key, ''])))
+    toast.success(t('save'))
+    await load()
+  }
+
+  return <div className='space-y-6'><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><h1 className='mb-4 text-2xl font-semibold'>{title}</h1><div className='grid gap-3 md:grid-cols-2'>{fields.map((f) => <div key={f.key}><Label>{f.label}</Label><Input value={form[f.key] || ''} onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))} /></div>)}</div><Button className='mt-4' onClick={() => { void create() }}>{t('create')}</Button></section><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'>{rows.length === 0 ? <p className='text-sm text-slate-500'>{t('empty')}</p> : rows.map((r) => <div key={r.id} className='mb-2 rounded-xl border border-slate-200 p-3 text-sm'>{fields.map((f) => r[f.key]).filter(Boolean).join(' · ') || r.id}</div>)}</section></div>
 }
 
 function ReportsPage() {
