@@ -17,6 +17,8 @@ docker compose up -d --build
 docker compose exec backend python scripts/seed.py
 ```
 
+Not: Action Library için zorunlu TR/EN başlangıç maddeleri backend açılışında otomatik olarak kontrol edilir ve eksik olanlar tamamlanır.
+
 ## Neler eklendi
 - Action Library CRUD (`/api/action-library`) + TR/EN seed maddeleri.
 - Issuer/Company Profiles CRUD + logo upload (`/api/settings/company-profiles`).
