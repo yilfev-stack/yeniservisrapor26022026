@@ -329,6 +329,18 @@ type ProductForm = {
   trim_material: string
   seat_material: string
   stem_material: string
+  seat_sealing_size: string
+  seat_sealing_size_unit: 'mm' | 'inch'
+  seat_sealing_material: string
+  packing_size: string
+  packing_size_unit: 'mm' | 'inch'
+  packing_material: string
+  body_seal_size: string
+  body_seal_size_unit: 'mm' | 'inch'
+  body_seal_material: string
+  actuator_output_seat_size: string
+  actuator_output_seat_size_unit: 'mm' | 'inch'
+  actuator_output_seat_material: string
   actuator: { type: string; brand: string; model: string; serial_no: string; action: string; model_same_as_valve: boolean; serial_same_as_valve: boolean }
   accessories: Array<{ key: string; installed: boolean; brand: string; model: string; serial_no: string; notes: string }>
 }
@@ -345,6 +357,14 @@ type ProductOptionLists = {
   trim_material: string[]
   seat_material: string[]
   stem_material: string[]
+  seat_sealing_size: string[]
+  seat_sealing_material: string[]
+  packing_size: string[]
+  packing_material: string[]
+  body_seal_size: string[]
+  body_seal_material: string[]
+  actuator_output_seat_size: string[]
+  actuator_output_seat_material: string[]
   actuator_type: string[]
   actuator_brand: string[]
   actuator_model: string[]
@@ -366,6 +386,14 @@ const defaultProductOptions: ProductOptionLists = {
   trim_material: [],
   seat_material: [],
   stem_material: [],
+  seat_sealing_size: [],
+  seat_sealing_material: [],
+  packing_size: [],
+  packing_material: [],
+  body_seal_size: [],
+  body_seal_material: [],
+  actuator_output_seat_size: [],
+  actuator_output_seat_material: [],
   actuator_type: ['pneumatic_diaphragm', 'pneumatic_piston', 'electric', 'hydraulic', 'other'],
   actuator_brand: [],
   actuator_model: [],
@@ -377,7 +405,7 @@ const defaultProductOptions: ProductOptionLists = {
 
 const makeAccessory = (key: string) => ({ key, installed: false, brand: '', model: '', serial_no: '', notes: '' })
 const emptyProduct = (): ProductForm => ({
-  customer_id: '', brand_id: '', model_id: '', type: '', valve_type: 'control', manufacturer: '', serial_no: '', tag_no: '', size: '', pressure_class: '', connection_type: '', body_style: '', fail_action: '', body_material: '', trim_material: '', seat_material: '', stem_material: '',
+  customer_id: '', brand_id: '', model_id: '', type: '', valve_type: 'control', manufacturer: '', serial_no: '', tag_no: '', size: '', pressure_class: '', connection_type: '', body_style: '', fail_action: '', body_material: '', trim_material: '', seat_material: '', stem_material: '', seat_sealing_size: '', seat_sealing_size_unit: 'mm', seat_sealing_material: '', packing_size: '', packing_size_unit: 'mm', packing_material: '', body_seal_size: '', body_seal_size_unit: 'mm', body_seal_material: '', actuator_output_seat_size: '', actuator_output_seat_size_unit: 'mm', actuator_output_seat_material: '',
   actuator: { type: 'pneumatic_diaphragm', brand: '', model: '', serial_no: '', action: '', model_same_as_valve: false, serial_same_as_valve: false },
   accessories: defaultProductOptions.accessory_key.map(makeAccessory),
 })
@@ -425,6 +453,22 @@ function ProductsPage() {
     setOptions((prev) => ({ ...prev, [field]: prev[field].includes(cleaned) ? prev[field] : [...prev[field], cleaned] }))
   }
 
+
+  const renameOptionValue = async (field: keyof ProductOptionLists, oldValue: string) => {
+    const next = window.prompt('Yeni değer', oldValue)?.trim()
+    if (!next || next === oldValue) return
+    await api(`/api/product-options/${field}/values`, { method: 'PUT', body: JSON.stringify({ old_value: oldValue, new_value: next }) })
+    setOptions((prev) => ({ ...prev, [field]: prev[field].map((v) => v === oldValue ? next : v) }))
+    toast.success('Madde güncellendi')
+  }
+
+  const removeOptionValue = async (field: keyof ProductOptionLists, value: string) => {
+    if (!window.confirm(`Silinsin mi? ${value}`)) return
+    await api(`/api/product-options/${field}/values?value=${encodeURIComponent(value)}`, { method: 'DELETE' })
+    setOptions((prev) => ({ ...prev, [field]: prev[field].filter((v) => v !== value) }))
+    toast.success('Madde silindi')
+  }
+
   const saveSingleOption = async (field: keyof ProductOptionLists, value: string) => {
     if (!value.trim()) return
     await saveOptionValue(field, value)
@@ -435,6 +479,7 @@ function ProductsPage() {
     const tasks: Array<[keyof ProductOptionLists, string]> = [
       ['type', form.type], ['valve_type', form.valve_type], ['size', form.size], ['pressure_class', form.pressure_class], ['connection_type', form.connection_type], ['body_style', form.body_style], ['fail_action', form.fail_action],
       ['body_material', form.body_material], ['trim_material', form.trim_material], ['seat_material', form.seat_material], ['stem_material', form.stem_material],
+      ['seat_sealing_size', form.seat_sealing_size], ['seat_sealing_material', form.seat_sealing_material], ['packing_size', form.packing_size], ['packing_material', form.packing_material], ['body_seal_size', form.body_seal_size], ['body_seal_material', form.body_seal_material], ['actuator_output_seat_size', form.actuator_output_seat_size], ['actuator_output_seat_material', form.actuator_output_seat_material],
       ['actuator_type', form.actuator.type], ['actuator_brand', form.actuator.brand], ['actuator_model', form.actuator.model], ['actuator_action', form.actuator.action],
     ]
     for (const a of form.accessories) tasks.push(['accessory_key', a.key], ['accessory_brand', a.brand], ['accessory_model', a.model])
@@ -532,6 +577,20 @@ function ProductsPage() {
         <div><Label>Trim Material</Label><div className='flex gap-2'><Input list='trim-material-options' disabled={!editing} value={form.trim_material} onChange={(e) => setForm((p) => ({ ...p, trim_material: e.target.value }))} /><Button disabled={!editing} onClick={() => { void saveSingleOption('trim_material', form.trim_material) }}>Kaydet</Button></div><datalist id='trim-material-options'>{options.trim_material.map((v) => <option key={v} value={v} />)}</datalist></div>
         <div><Label>Seat Material</Label><div className='flex gap-2'><Input list='seat-material-options' disabled={!editing} value={form.seat_material} onChange={(e) => setForm((p) => ({ ...p, seat_material: e.target.value }))} /><Button disabled={!editing} onClick={() => { void saveSingleOption('seat_material', form.seat_material) }}>Kaydet</Button></div><datalist id='seat-material-options'>{options.seat_material.map((v) => <option key={v} value={v} />)}</datalist></div>
         <div><Label>Stem Material</Label><div className='flex gap-2'><Input list='stem-material-options' disabled={!editing} value={form.stem_material} onChange={(e) => setForm((p) => ({ ...p, stem_material: e.target.value }))} /><Button disabled={!editing} onClick={() => { void saveSingleOption('stem_material', form.stem_material) }}>Kaydet</Button></div><datalist id='stem-material-options'>{options.stem_material.map((v) => <option key={v} value={v} />)}</datalist></div>
+      </div>
+    </section>
+
+    <section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70 space-y-3'>
+      <h2 className='text-lg font-semibold'>Sealing & Packing</h2>
+      <div className='grid gap-3 md:grid-cols-2'>
+        <div><Label>Seat Sealing Size</Label><div className='flex gap-2'><Input list='seat-sealing-size-options' disabled={!editing} value={form.seat_sealing_size} onChange={(e) => setForm((p) => ({ ...p, seat_sealing_size: e.target.value }))} placeholder='iç çap X dış çap X yükseklik' /><select disabled={!editing} className='h-10 rounded-md border border-slate-200 bg-white px-2 text-sm' value={form.seat_sealing_size_unit} onChange={(e) => setForm((p) => ({ ...p, seat_sealing_size_unit: e.target.value as 'mm' | 'inch' }))}><option value='mm'>mm</option><option value='inch'>inch</option></select><Button disabled={!editing} onClick={() => { void saveSingleOption('seat_sealing_size', form.seat_sealing_size) }}>Kaydet</Button></div><datalist id='seat-sealing-size-options'>{options.seat_sealing_size.map((v) => <option key={v} value={v} />)}</datalist><div className='mt-1 flex flex-wrap gap-1'>{options.seat_sealing_size.map((v) => <span key={v} className='inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs'>{v}<button type='button' onClick={() => { void renameOptionValue('seat_sealing_size', v) }}>Düzenle</button><button type='button' onClick={() => { void removeOptionValue('seat_sealing_size', v) }}>Sil</button></span>)}</div></div>
+        <div><Label>Seat Sealing Material</Label><div className='flex gap-2'><Input list='seat-sealing-material-options' disabled={!editing} value={form.seat_sealing_material} onChange={(e) => setForm((p) => ({ ...p, seat_sealing_material: e.target.value }))} /><Button disabled={!editing} onClick={() => { void saveSingleOption('seat_sealing_material', form.seat_sealing_material) }}>Kaydet</Button></div><datalist id='seat-sealing-material-options'>{options.seat_sealing_material.map((v) => <option key={v} value={v} />)}</datalist><div className='mt-1 flex flex-wrap gap-1'>{options.seat_sealing_material.map((v) => <span key={v} className='inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs'>{v}<button type='button' onClick={() => { void renameOptionValue('seat_sealing_material', v) }}>Düzenle</button><button type='button' onClick={() => { void removeOptionValue('seat_sealing_material', v) }}>Sil</button></span>)}</div></div>
+        <div><Label>Packing Size</Label><div className='flex gap-2'><Input list='packing-size-options' disabled={!editing} value={form.packing_size} onChange={(e) => setForm((p) => ({ ...p, packing_size: e.target.value }))} placeholder='iç çap X dış çap X yükseklik' /><select disabled={!editing} className='h-10 rounded-md border border-slate-200 bg-white px-2 text-sm' value={form.packing_size_unit} onChange={(e) => setForm((p) => ({ ...p, packing_size_unit: e.target.value as 'mm' | 'inch' }))}><option value='mm'>mm</option><option value='inch'>inch</option></select><Button disabled={!editing} onClick={() => { void saveSingleOption('packing_size', form.packing_size) }}>Kaydet</Button></div><datalist id='packing-size-options'>{options.packing_size.map((v) => <option key={v} value={v} />)}</datalist><div className='mt-1 flex flex-wrap gap-1'>{options.packing_size.map((v) => <span key={v} className='inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs'>{v}<button type='button' onClick={() => { void renameOptionValue('packing_size', v) }}>Düzenle</button><button type='button' onClick={() => { void removeOptionValue('packing_size', v) }}>Sil</button></span>)}</div></div>
+        <div><Label>Packing Material</Label><div className='flex gap-2'><Input list='packing-material-options' disabled={!editing} value={form.packing_material} onChange={(e) => setForm((p) => ({ ...p, packing_material: e.target.value }))} /><Button disabled={!editing} onClick={() => { void saveSingleOption('packing_material', form.packing_material) }}>Kaydet</Button></div><datalist id='packing-material-options'>{options.packing_material.map((v) => <option key={v} value={v} />)}</datalist><div className='mt-1 flex flex-wrap gap-1'>{options.packing_material.map((v) => <span key={v} className='inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs'>{v}<button type='button' onClick={() => { void renameOptionValue('packing_material', v) }}>Düzenle</button><button type='button' onClick={() => { void removeOptionValue('packing_material', v) }}>Sil</button></span>)}</div></div>
+        <div><Label>Body Seal Size</Label><div className='flex gap-2'><Input list='body-seal-size-options' disabled={!editing} value={form.body_seal_size} onChange={(e) => setForm((p) => ({ ...p, body_seal_size: e.target.value }))} placeholder='iç çap X dış çap X yükseklik' /><select disabled={!editing} className='h-10 rounded-md border border-slate-200 bg-white px-2 text-sm' value={form.body_seal_size_unit} onChange={(e) => setForm((p) => ({ ...p, body_seal_size_unit: e.target.value as 'mm' | 'inch' }))}><option value='mm'>mm</option><option value='inch'>inch</option></select><Button disabled={!editing} onClick={() => { void saveSingleOption('body_seal_size', form.body_seal_size) }}>Kaydet</Button></div><datalist id='body-seal-size-options'>{options.body_seal_size.map((v) => <option key={v} value={v} />)}</datalist><div className='mt-1 flex flex-wrap gap-1'>{options.body_seal_size.map((v) => <span key={v} className='inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs'>{v}<button type='button' onClick={() => { void renameOptionValue('body_seal_size', v) }}>Düzenle</button><button type='button' onClick={() => { void removeOptionValue('body_seal_size', v) }}>Sil</button></span>)}</div></div>
+        <div><Label>Body Seal Material</Label><div className='flex gap-2'><Input list='body-seal-material-options' disabled={!editing} value={form.body_seal_material} onChange={(e) => setForm((p) => ({ ...p, body_seal_material: e.target.value }))} /><Button disabled={!editing} onClick={() => { void saveSingleOption('body_seal_material', form.body_seal_material) }}>Kaydet</Button></div><datalist id='body-seal-material-options'>{options.body_seal_material.map((v) => <option key={v} value={v} />)}</datalist><div className='mt-1 flex flex-wrap gap-1'>{options.body_seal_material.map((v) => <span key={v} className='inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs'>{v}<button type='button' onClick={() => { void renameOptionValue('body_seal_material', v) }}>Düzenle</button><button type='button' onClick={() => { void removeOptionValue('body_seal_material', v) }}>Sil</button></span>)}</div></div>
+        <div><Label>Actuator Output Seat Size</Label><div className='flex gap-2'><Input list='aos-size-options' disabled={!editing} value={form.actuator_output_seat_size} onChange={(e) => setForm((p) => ({ ...p, actuator_output_seat_size: e.target.value }))} placeholder='iç çap X dış çap X yükseklik' /><select disabled={!editing} className='h-10 rounded-md border border-slate-200 bg-white px-2 text-sm' value={form.actuator_output_seat_size_unit} onChange={(e) => setForm((p) => ({ ...p, actuator_output_seat_size_unit: e.target.value as 'mm' | 'inch' }))}><option value='mm'>mm</option><option value='inch'>inch</option></select><Button disabled={!editing} onClick={() => { void saveSingleOption('actuator_output_seat_size', form.actuator_output_seat_size) }}>Kaydet</Button></div><datalist id='aos-size-options'>{options.actuator_output_seat_size.map((v) => <option key={v} value={v} />)}</datalist><div className='mt-1 flex flex-wrap gap-1'>{options.actuator_output_seat_size.map((v) => <span key={v} className='inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs'>{v}<button type='button' onClick={() => { void renameOptionValue('actuator_output_seat_size', v) }}>Düzenle</button><button type='button' onClick={() => { void removeOptionValue('actuator_output_seat_size', v) }}>Sil</button></span>)}</div></div>
+        <div><Label>Actuator Output Seat Material</Label><div className='flex gap-2'><Input list='aos-material-options' disabled={!editing} value={form.actuator_output_seat_material} onChange={(e) => setForm((p) => ({ ...p, actuator_output_seat_material: e.target.value }))} /><Button disabled={!editing} onClick={() => { void saveSingleOption('actuator_output_seat_material', form.actuator_output_seat_material) }}>Kaydet</Button></div><datalist id='aos-material-options'>{options.actuator_output_seat_material.map((v) => <option key={v} value={v} />)}</datalist><div className='mt-1 flex flex-wrap gap-1'>{options.actuator_output_seat_material.map((v) => <span key={v} className='inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs'>{v}<button type='button' onClick={() => { void renameOptionValue('actuator_output_seat_material', v) }}>Düzenle</button><button type='button' onClick={() => { void removeOptionValue('actuator_output_seat_material', v) }}>Sil</button></span>)}</div></div>
       </div>
     </section>
 

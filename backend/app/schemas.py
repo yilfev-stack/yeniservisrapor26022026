@@ -96,6 +96,19 @@ class ProductIn(StrictModel):
     seat_material: str | None = None
     stem_material: str | None = None
 
+    seat_sealing_size: str | None = None
+    seat_sealing_size_unit: Literal['mm', 'inch'] | None = None
+    seat_sealing_material: str | None = None
+    packing_size: str | None = None
+    packing_size_unit: Literal['mm', 'inch'] | None = None
+    packing_material: str | None = None
+    body_seal_size: str | None = None
+    body_seal_size_unit: Literal['mm', 'inch'] | None = None
+    body_seal_material: str | None = None
+    actuator_output_seat_size: str | None = None
+    actuator_output_seat_size_unit: Literal['mm', 'inch'] | None = None
+    actuator_output_seat_material: str | None = None
+
     actuator: ActuatorIn | None = None
     accessories: list[AccessoryIn] = Field(default_factory=list)
 
