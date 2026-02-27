@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from .action_library_seed import ensure_action_library_seed
 from .config import settings
 from .routers import action_library, auth, catalog, customers, media, products, reports, settings as settings_router, templates
 
@@ -19,6 +20,11 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+
+
+@app.on_event('startup')
+async def startup_seed_data():
+    await ensure_action_library_seed()
 
 
 @app.get('/health')
