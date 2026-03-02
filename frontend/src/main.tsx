@@ -1,7 +1,7 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, BookText, Building2, FileSpreadsheet, FileText, Home, Package, Plus, Settings, Users, Wrench } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BookText, Building2, Eye, FileSpreadsheet, FileText, Home, Package, Pencil, Plus, Printer, Settings, Trash2, Users, Wrench } from 'lucide-react'
 import { Toaster } from 'sonner'
 import './index.css'
 import { Button } from '@/components/ui/button'
@@ -103,8 +103,11 @@ function resolveApiUrl(path: string): string {
 }
 
 async function api<T = unknown>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(resolveApiUrl(path), { headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) }, ...init })
+  const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData
+  const headers = isFormData ? (init?.headers || {}) : { 'Content-Type': 'application/json', ...(init?.headers || {}) }
+  const res = await fetch(resolveApiUrl(path), { ...init, headers })
   if (!res.ok) throw new Error(await res.text())
+  if (res.status === 204) return undefined as T
   return res.json()
 }
 
@@ -448,6 +451,29 @@ const defaultProductOptions: ProductOptionLists = {
   accessory_model: [],
 }
 
+
+
+const OPTION_FIELD_META: Array<{ key: keyof ProductOptionLists; label: string }> = [
+  { key: 'type', label: 'Tip' },
+  { key: 'size', label: 'DN/NPS' },
+  { key: 'pressure_class', label: 'PN/Class' },
+  { key: 'connection_type', label: 'Bağlantı' },
+  { key: 'body_style', label: 'Gövde stili' },
+  { key: 'fail_action', label: 'Fail Action' },
+  { key: 'body_material', label: 'Body Material' },
+  { key: 'trim_material', label: 'Trim Material' },
+  { key: 'seat_material', label: 'Seat Material' },
+  { key: 'stem_material', label: 'Stem Material' },
+  { key: 'seat_sealing_size', label: 'Seat Sealing Size' },
+  { key: 'seat_sealing_material', label: 'Seat Sealing Material' },
+  { key: 'packing_size', label: 'Packing Size' },
+  { key: 'packing_material', label: 'Packing Material' },
+  { key: 'body_seal_size', label: 'Body Seal Size' },
+  { key: 'body_seal_material', label: 'Body Seal Material' },
+  { key: 'actuator_output_seat_size', label: 'Actuator Output Seat Size' },
+  { key: 'actuator_output_seat_material', label: 'Actuator Output Seat Material' },
+]
+
 const makeAccessory = (key: string) => ({ key, installed: false, brand: '', model: '', serial_no: '', notes: '' })
 const emptyProduct = (): ProductForm => ({
   customer_id: '', brand_id: '', model_id: '', type: '', valve_type: 'control', manufacturer: '', serial_no: '', tag_no: '', size: '', pressure_class: '', connection_type: '', body_style: '', fail_action: '', body_material: '', trim_material: '', seat_material: '', stem_material: '', seat_sealing_size: '', seat_sealing_size_unit: 'mm', seat_sealing_material: '', packing_size: '', packing_size_unit: 'mm', packing_material: '', body_seal_size: '', body_seal_size_unit: 'mm', body_seal_material: '', actuator_output_seat_size: '', actuator_output_seat_size_unit: 'mm', actuator_output_seat_material: '',
@@ -467,6 +493,8 @@ function ProductsPage() {
   const [newAccessoryKey, setNewAccessoryKey] = React.useState('')
   const [newBrandName, setNewBrandName] = React.useState('')
   const [newModelName, setNewModelName] = React.useState('')
+  const [selectedOptionField, setSelectedOptionField] = React.useState<keyof ProductOptionLists>('connection_type')
+  const [newOptionValue, setNewOptionValue] = React.useState('')
 
   const loadRows = React.useCallback(async () => {
     try { setRows(await api<any[]>('/api/products')) } catch { setRows([]) }
@@ -622,6 +650,17 @@ function ProductsPage() {
       </div>
     </div>
 
+    <section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70 space-y-3'>
+      <h2 className='text-lg font-semibold'>Açılır Liste Yönetimi</h2>
+      <p className='text-sm text-slate-500'>Kutulara özel seçenekleri buradan ekle / düzenle / sil. Ölçü alanları iç çapa göre sıralanır.</p>
+      <div className='grid gap-2 md:grid-cols-[1fr_1fr_auto]'>
+        <select disabled={!editing} className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={selectedOptionField} onChange={(e) => setSelectedOptionField(e.target.value as keyof ProductOptionLists)}>{OPTION_FIELD_META.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}</select>
+        <Input disabled={!editing} value={newOptionValue} onChange={(e) => setNewOptionValue(e.target.value)} placeholder='Yeni seçenek girin' />
+        <Button disabled={!editing} onClick={() => { void saveSingleOption(selectedOptionField, newOptionValue).then(() => setNewOptionValue('')) }}>Ekle</Button>
+      </div>
+      <div className='flex flex-wrap gap-1'>{options[selectedOptionField].map((v) => <span key={v} className='inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs'>{v}<button type='button' onClick={() => { void renameOptionValue(selectedOptionField, v) }}>Düzenle</button><button type='button' onClick={() => { void removeOptionValue(selectedOptionField, v) }}>Sil</button></span>)}</div>
+    </section>
+
     <section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'>
       <div className='grid gap-3 md:grid-cols-2'>
         <div className='md:col-span-2'><Label>Müşteri (Opsiyonel)</Label><select disabled={!editing} className='h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm' value={form.customer_id} onChange={(e) => setForm((p) => ({ ...p, customer_id: e.target.value }))}><option value=''>Seçiniz...</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
@@ -716,13 +755,48 @@ function SimpleCrudPage({ title, endpoint, fields }: { title: string; endpoint: 
 
 function ReportsPage() {
   const { t } = useI18n()
+  const navigate = useNavigate()
   const [filters, setFilters] = React.useState<any>({ customer_id: '', contact_id: '', issuer_id: '', status: '', date_from: '', date_to: '', brand: '', model: '', serial_no: '', tag_no: '' })
   const [rows, setRows] = React.useState<any[]>([])
-  const load = async () => {
+  const [customers, setCustomers] = React.useState<any[]>([])
+  const [issuers, setIssuers] = React.useState<any[]>([])
+
+  const load = React.useCallback(async () => {
     const qs = new URLSearchParams(Object.entries(filters).filter(([, v]) => v).map(([k, v]) => [k, String(v)]))
     setRows(await api<any[]>(`/api/reports?${qs.toString()}`))
+  }, [filters])
+
+  React.useEffect(() => {
+    void api<any[]>('/api/customers').then(setCustomers).catch(() => setCustomers([]))
+    void api<any[]>('/api/settings/issuers').then(setIssuers).catch(() => setIssuers([]))
+    void load()
+  }, [load])
+
+  const removeReport = async (id: string) => {
+    if (!window.confirm('Rapor silinsin mi?')) return
+    await api(`/api/reports/${id}`, { method: 'DELETE' })
+    await load()
   }
-  return <div className='space-y-6'><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><h1 className='mb-4 text-2xl font-semibold'>{t('reports')}</h1><div className='grid gap-3 md:grid-cols-3'>{Object.keys(filters).map((k) => <Input key={k} placeholder={k} value={filters[k]} onChange={(e) => setFilters((p: any) => ({ ...p, [k]: e.target.value }))} />)}</div><Button className='mt-3' onClick={() => { void load() }}>{t('filter')}</Button></section><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'>{rows.map((r) => <div key={r.id} className='mb-2 rounded-xl border border-slate-200 p-3 text-sm'>{r.report_no} · {r.status}</div>)}</section></div>
+
+  const printReport = async (id: string) => {
+    const res = await api<{ url: string }>(`/api/reports/${id}/export/pdf`, { method: 'POST', body: JSON.stringify({ include_before: true, include_after: true, photos_per_page: 4, language: 'tr' }) })
+    if (res?.url) window.open(resolveApiUrl(res.url), '_blank')
+  }
+
+  const statusOptions = ['draft', 'pre_report', 'quotation_sent', 'awaiting_approval', 'approved', 'in_service', 'final_report', 'archived']
+
+  return <div className='space-y-6'><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><h1 className='mb-4 text-2xl font-semibold'>{t('reports')}</h1><div className='grid gap-3 md:grid-cols-3'>
+    <select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={filters.customer_id} onChange={(e) => setFilters((p: any) => ({ ...p, customer_id: e.target.value }))}><option value=''>Müşteri (tümü)</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+    <Input placeholder='contact_id (opsiyonel)' value={filters.contact_id} onChange={(e) => setFilters((p: any) => ({ ...p, contact_id: e.target.value }))} />
+    <select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={filters.issuer_id} onChange={(e) => setFilters((p: any) => ({ ...p, issuer_id: e.target.value }))}><option value=''>Bayi (tümü)</option>{issuers.map((i) => <option key={i.id} value={i.id}>{i.name || i.id}</option>)}</select>
+    <div className='flex gap-2'><select className='h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm' value={filters.status} onChange={(e) => setFilters((p: any) => ({ ...p, status: e.target.value }))}><option value=''>Durum (tümü)</option>{statusOptions.map((s) => <option key={s} value={s}>{s}</option>)}</select><Input placeholder='veya elle durum yaz' value={filters.status} onChange={(e) => setFilters((p: any) => ({ ...p, status: e.target.value }))} /></div>
+    <Input type='date' value={filters.date_from} onChange={(e) => setFilters((p: any) => ({ ...p, date_from: e.target.value }))} />
+    <Input type='date' value={filters.date_to} onChange={(e) => setFilters((p: any) => ({ ...p, date_to: e.target.value }))} />
+    <Input placeholder='brand' value={filters.brand} onChange={(e) => setFilters((p: any) => ({ ...p, brand: e.target.value }))} />
+    <Input placeholder='model' value={filters.model} onChange={(e) => setFilters((p: any) => ({ ...p, model: e.target.value }))} />
+    <Input placeholder='serial_no' value={filters.serial_no} onChange={(e) => setFilters((p: any) => ({ ...p, serial_no: e.target.value }))} />
+    <Input placeholder='tag_no' value={filters.tag_no} onChange={(e) => setFilters((p: any) => ({ ...p, tag_no: e.target.value }))} />
+  </div><div className='mt-3 flex gap-2'><Button onClick={() => { void load() }}>{t('filter')}</Button><Button variant='secondary' onClick={() => { setFilters({ customer_id: '', contact_id: '', issuer_id: '', status: '', date_from: '', date_to: '', brand: '', model: '', serial_no: '', tag_no: '' }) }}>Temizle</Button></div></section><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70 space-y-2'>{rows.map((r) => <div key={r.id} className='flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm'><div>{r.report_no} · {r.status}</div><div className='flex gap-2'><Button variant='secondary' onClick={() => navigate(`/reports/new?reportId=${r.id}`)}><Eye size={14} className='mr-1' />İncele/Düzenle</Button><Button variant='ghost' onClick={() => { void printReport(r.id) }}><Printer size={14} className='mr-1' />Yazdır</Button><Button variant='ghost' onClick={() => navigate(`/reports/new?reportId=${r.id}`)}><Pencil size={14} className='mr-1' />Revize</Button><Button variant='ghost' onClick={() => { void removeReport(r.id) }}><Trash2 size={14} className='mr-1' />Sil</Button></div></div>)}</section></div>
 }
 
 function IssuersReportsPage() {
@@ -753,12 +827,17 @@ function SettingsPage() {
 function ReportWizardPage() {
   const { t, lang } = useI18n()
   const navigate = useNavigate()
+  const location = useLocation()
+  const reportIdFromQuery = React.useMemo(() => new URLSearchParams(location.search).get('reportId'), [location.search])
+  const [reportId, setReportId] = React.useState<string | null>(reportIdFromQuery)
   const [step, setStep] = React.useState(0)
   const [customers, setCustomers] = React.useState<any[]>([])
   const [contacts, setContacts] = React.useState<any[]>([])
   const [products, setProducts] = React.useState<ProductRow[]>([])
   const [library, setLibrary] = React.useState<any[]>([])
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({})
+  const [photoCaption, setPhotoCaption] = React.useState('')
+  const [uploadedPhotos, setUploadedPhotos] = React.useState<Array<{ kind: 'before' | 'after'; thumb_url: string }>>([])
   const [data, setData] = React.useState<any>({
     customer_id: '', contact_id: '', shipping_address: '',
     product: '', valve_type: '', control_type: '', drive_type: '', motion_type: '',
@@ -772,9 +851,34 @@ function ReportWizardPage() {
   }, [])
 
   React.useEffect(() => {
+    if (!reportIdFromQuery) return
+    void api<any>(`/api/reports/${reportIdFromQuery}`).then((r) => {
+      setReportId(r.id)
+      setData((p: any) => ({
+        ...p,
+        customer_id: r.customer_id || '',
+        contact_id: r.contact_id || '',
+        shipping_address: r.blocks?.shipping_address || '',
+        valve_type: r.blocks?.valve_type || '',
+        control_type: r.blocks?.control_type || '',
+        drive_type: r.blocks?.drive_type || '',
+        motion_type: r.blocks?.motion_type || '',
+        arrival_date: r.arrival_date ? String(r.arrival_date).slice(0, 10) : '',
+        pre_inspection_date: r.blocks?.pre_inspection_date || '',
+        quotation_approval_date: r.blocks?.quotation_approval_date || '',
+        shipping_date: r.shipping_date ? String(r.shipping_date).slice(0, 10) : '',
+        complaints: (r.blocks?.complaint || []).map((x: any) => x.text).filter(Boolean).concat(['']).slice(0, 99),
+        findings: (r.blocks?.problems || []).map((x: any) => x.text).filter(Boolean).concat(['']).slice(0, 99),
+        actions: r.actions || [],
+        result: r.result_notes || '',
+      }))
+    }).catch(() => undefined)
+  }, [reportIdFromQuery])
+
+  React.useEffect(() => {
     if (!data.customer_id) return setContacts([])
     const c = customers.find((x) => x.id === data.customer_id)
-    setData((p: any) => ({ ...p, shipping_address: c?.shipping_address || '' }))
+    setData((p: any) => ({ ...p, shipping_address: c?.shipping_address || p.shipping_address }))
     void api<any[]>(`/api/customers/${data.customer_id}/contacts`).then(setContacts).catch(() => setContacts([]))
   }, [data.customer_id, customers])
 
@@ -787,8 +891,32 @@ function ReportWizardPage() {
   const steps = [t('general'), t('product'), t('shipping'), t('complaint'), 'Tespitler', t('actions'), t('spares'), t('photosResult')]
 
   const saveReport = async () => {
-    await api('/api/reports', { method: 'POST', body: JSON.stringify({ language: lang, status: 'draft', customer_id: data.customer_id || 'unknown-customer', contact_id: data.contact_id || null, responsible_user: 'frontend-user', arrival_date: data.arrival_date || null, shipping_date: data.shipping_date || null, products: [], blocks: { complaint: data.complaints.filter(Boolean).map((x: string) => ({ text: x })), problems: data.findings.filter(Boolean).map((x: string) => ({ text: x })), shipping_address: data.shipping_address, pre_inspection_date: data.pre_inspection_date, quotation_approval_date: data.quotation_approval_date, control_type: data.control_type, drive_type: data.drive_type, motion_type: data.motion_type, valve_type: data.valve_type }, actions: data.actions, spares: [], result_notes: data.result }) })
+    const payload = { language: lang, status: 'draft', customer_id: data.customer_id || 'unknown-customer', contact_id: data.contact_id || null, responsible_user: 'frontend-user', arrival_date: data.arrival_date || null, shipping_date: data.shipping_date || null, products: [], blocks: { complaint: data.complaints.filter(Boolean).map((x: string) => ({ text: x })), problems: data.findings.filter(Boolean).map((x: string) => ({ text: x })), shipping_address: data.shipping_address, pre_inspection_date: data.pre_inspection_date, quotation_approval_date: data.quotation_approval_date, control_type: data.control_type, drive_type: data.drive_type, motion_type: data.motion_type, valve_type: data.valve_type }, actions: data.actions, spares: [], result_notes: data.result }
+    if (reportId) await api(`/api/reports/${reportId}`, { method: 'PUT', body: JSON.stringify(payload) })
+    else {
+      const created = await api<{ id: string }>('/api/reports', { method: 'POST', body: JSON.stringify(payload) })
+      setReportId(created.id)
+    }
     toast.success(t('save'))
+  }
+
+  const uploadPhoto = async (kind: 'before' | 'after', file?: File | null) => {
+    if (!file) return
+    let rid = reportId
+    if (!rid) {
+      const created = await api<{ id: string }>('/api/reports', { method: 'POST', body: JSON.stringify({ language: lang, status: 'draft', customer_id: data.customer_id || 'unknown-customer', contact_id: data.contact_id || null, responsible_user: 'frontend-user', arrival_date: data.arrival_date || null, shipping_date: data.shipping_date || null, products: [], blocks: { complaint: [], problems: [], shipping_address: data.shipping_address, control_type: data.control_type, drive_type: data.drive_type, motion_type: data.motion_type, valve_type: data.valve_type }, actions: [], spares: [], result_notes: '' }) })
+      rid = created.id
+      setReportId(created.id)
+      toast.success('Önce taslak rapor oluşturuldu')
+    }
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('kind', kind)
+    if (photoCaption.trim()) fd.append('caption', photoCaption.trim())
+    const res = await api<{ thumb_url: string }>(`/api/reports/${rid}/photos`, { method: 'POST', body: fd })
+    setUploadedPhotos((p) => [...p, { kind, thumb_url: res.thumb_url }])
+    setPhotoCaption('')
+    toast.success('Fotoğraf yüklendi')
   }
 
   const toggleAction = (item: any, selected: boolean) => {
@@ -796,7 +924,7 @@ function ReportWizardPage() {
     else setData((p: any) => ({ ...p, actions: p.actions.filter((a: ReportActionRow) => a.library_id !== item.id) }))
   }
 
-  return <div className='mx-auto max-w-[920px] space-y-6'><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><h1 className='text-2xl font-semibold'>{t('wizardStep')} {step + 1} / 8</h1><p className='text-sm text-slate-500'>{steps[step]}</p><div className='mt-2 h-1.5 rounded-full bg-slate-100'><div className='h-full bg-slate-900' style={{ width: `${((step + 1) / 8) * 100}%` }} /></div><div className='mt-6 space-y-4'>
+  return <div className='mx-auto max-w-[920px] space-y-6'><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><h1 className='text-2xl font-semibold'>{t('wizardStep')} {step + 1} / 8</h1><p className='text-sm text-slate-500'>{steps[step]} {reportId ? `· #${reportId}` : ''}</p><div className='mt-2 h-1.5 rounded-full bg-slate-100'><div className='h-full bg-slate-900' style={{ width: `${((step + 1) / 8) * 100}%` }} /></div><div className='mt-6 space-y-4'>
     {step === 0 && <div className='space-y-3'><Combobox value={data.customer_id} onChange={(v) => setData((p: any) => ({ ...p, customer_id: (customers.find((c) => c.name === v)?.id) || '' }))} options={customers.map((c) => c.name)} placeholder='Müşteri Seçin' /><Combobox value={data.contact_id} onChange={(v) => setData((p: any) => ({ ...p, contact_id: (contacts.find((c) => c.name === v)?.id) || '' }))} options={contacts.map((c) => c.name)} placeholder='Müşteri Yetkilisi Seçin' /><Combobox value={data.shipping_address} onChange={(v) => setData((p: any) => ({ ...p, shipping_address: v }))} options={[...new Set([data.shipping_address, ...customers.map((c) => c.shipping_address).filter(Boolean)])]} placeholder='Sevk Adresi Seçin' /></div>}
     {step === 1 && <div className='space-y-3'><div className='grid gap-3 md:grid-cols-3'><select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={data.control_type} onChange={(e) => setData((p: any) => ({ ...p, control_type: e.target.value }))}><option value=''>Kontrol tipi seçin</option><option value='on_off'>On Off</option><option value='oransal'>Oransal</option></select><select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={data.drive_type} onChange={(e) => setData((p: any) => ({ ...p, drive_type: e.target.value }))}><option value=''>Manual/Actuated</option><option value='manual'>Manual</option><option value='actuated'>Actuated</option></select><select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={data.motion_type} onChange={(e) => setData((p: any) => ({ ...p, motion_type: e.target.value }))}><option value=''>Lineer/Rotary</option><option value='lineer'>Lineer</option><option value='rotary'>Rotary</option></select></div>{VALVE_GROUPS.map((g) => <details key={g.group} open={!!openGroups[g.group]} onToggle={(e) => setOpenGroups((p) => ({ ...p, [g.group]: (e.target as HTMLDetailsElement).open }))} className='rounded-md border border-slate-200 p-3'><summary className='cursor-pointer font-medium'>{g.group}</summary><div className='mt-2 grid gap-2 md:grid-cols-2'>{g.items.map((it) => <button key={it} type='button' className={`rounded border px-3 py-2 text-left text-sm ${data.valve_type===it?'border-blue-500 bg-blue-50':'border-slate-200'}`} onClick={() => setData((p: any) => ({ ...p, valve_type: it }))}>{it}</button>)}</div></details>)}<Input value={data.valve_type} onChange={(e) => setData((p: any) => ({ ...p, valve_type: e.target.value }))} placeholder='Vana Tipi Seçin' /></div>}
     {step === 2 && <div className='grid gap-3 md:grid-cols-2'><div><Label>Geliş Tarihi</Label><Input type='date' value={data.arrival_date} onChange={(e) => setData((p: any) => ({ ...p, arrival_date: e.target.value }))} /></div><div><Label>Ön Tespit Tarihi</Label><Input type='date' value={data.pre_inspection_date} onChange={(e) => setData((p: any) => ({ ...p, pre_inspection_date: e.target.value }))} /></div><div><Label>Teklif Onaylanma Tarihi</Label><Input type='date' value={data.quotation_approval_date} onChange={(e) => setData((p: any) => ({ ...p, quotation_approval_date: e.target.value }))} /></div><div><Label>Sevk Tarihi</Label><Input type='date' value={data.shipping_date} onChange={(e) => setData((p: any) => ({ ...p, shipping_date: e.target.value }))} /></div></div>}
@@ -804,7 +932,7 @@ function ReportWizardPage() {
     {step === 4 && <div className='space-y-2'>{data.findings.map((c: string, i: number) => <div key={i}><Label>Tespit {i + 1}</Label><Textarea value={c} onChange={(e) => setData((p: any) => ({ ...p, findings: p.findings.map((x: string, idx: number) => idx === i ? e.target.value : x) }))} /></div>)}<Button variant='secondary' onClick={() => setData((p: any) => ({ ...p, findings: [...p.findings, ''] }))}>+ Yeni Tespit Ekle</Button></div>}
     {step === 5 && <div className='space-y-4'>{library.map((item) => { const checked = data.actions.some((a: ReportActionRow) => a.library_id === item.id); return <div key={item.id} className='rounded-lg border border-slate-200 p-3 text-sm'><label className='flex items-center gap-2'><input type='checkbox' checked={checked} onChange={(e) => toggleAction(item, e.target.checked)} />{lang === 'tr' ? item.text_tr : item.text_en}</label>{checked && <Textarea className='mt-2' value={(data.actions.find((a: ReportActionRow) => a.library_id === item.id)?.[`manual_extension_${lang}` as 'manual_extension_tr' | 'manual_extension_en']) || ''} onChange={(e) => setData((p: any) => ({ ...p, actions: p.actions.map((a: ReportActionRow) => a.library_id === item.id ? { ...a, [`manual_extension_${lang}`]: e.target.value } : a) }))} placeholder={t('manualExtension')} />}</div> })}</div>}
     {step === 6 && <Textarea value={data.spares} onChange={(e) => setData((p: any) => ({ ...p, spares: e.target.value }))} />}
-    {step === 7 && <Textarea value={data.result} onChange={(e) => setData((p: any) => ({ ...p, result: e.target.value }))} />}
+    {step === 7 && <div className='space-y-3'><Label>Sonuç</Label><Textarea value={data.result} onChange={(e) => setData((p: any) => ({ ...p, result: e.target.value }))} /><div className='grid gap-3 md:grid-cols-2'><div className='rounded-lg border border-slate-200 p-3 space-y-2'><h3 className='font-medium'>Öncesi Fotoğrafı</h3><Input type='file' accept='image/*' onChange={(e) => { void uploadPhoto('before', e.target.files?.[0]); e.currentTarget.value = '' }} /><Input placeholder='Açıklama (opsiyonel)' value={photoCaption} onChange={(e) => setPhotoCaption(e.target.value)} /><p className='text-xs text-slate-500'>Rapor id yoksa önce otomatik taslak açılır.</p></div><div className='rounded-lg border border-slate-200 p-3 space-y-2'><h3 className='font-medium'>Sonrası Fotoğrafı</h3><Input type='file' accept='image/*' onChange={(e) => { void uploadPhoto('after', e.target.files?.[0]); e.currentTarget.value = '' }} /><Input placeholder='Açıklama (opsiyonel)' value={photoCaption} onChange={(e) => setPhotoCaption(e.target.value)} /></div></div><div className='flex flex-wrap gap-2'>{uploadedPhotos.map((p, i) => <div key={`${p.thumb_url}-${i}`} className='rounded border p-1'><img src={resolveApiUrl(p.thumb_url)} alt={p.kind} className='h-14 w-20 object-cover' /></div>)}</div></div>}
   </div></section><div className='sticky bottom-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-3 shadow-sm'><div className='flex gap-2'><Button variant='secondary' onClick={() => setStep((s) => Math.max(0, s - 1))}><ArrowLeft size={14} className='mr-1' />{t('back')}</Button><Button variant='ghost' onClick={() => { void saveReport() }}>{t('save')}</Button><Button onClick={() => step < 7 ? setStep((s) => s + 1) : navigate('/reports')}>{t('next')}<ArrowRight size={14} className='ml-1' /></Button></div></div></div>
 }
 

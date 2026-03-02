@@ -77,16 +77,30 @@ def _normalize_option_value(value: str) -> str:
     return value.strip()
 
 
+SIZE_OPTION_FIELDS = {'seat_sealing_size', 'packing_size', 'body_seal_size', 'actuator_output_seat_size'}
+
+
+def _option_sort_key(field: str, value: str):
+    if field not in SIZE_OPTION_FIELDS:
+        return (value.lower(),)
+    raw = (value or '').strip().replace(',', '.')
+    inner = raw.split('x')[0].split('X')[0].strip()
+    try:
+        return (float(inner), value.lower())
+    except ValueError:
+        return (float('inf'), value.lower())
+
+
 @router.get('/product-options')
 async def get_product_options():
     doc = await collection('settings').find_one({'key': 'product_options'})
     values = doc.get('values', {}) if doc else {}
     merged = {}
     for key, defaults in DEFAULT_PRODUCT_OPTIONS.items():
-        merged[key] = sorted(set(defaults + [str(v) for v in values.get(key, []) if str(v).strip()]))
+        merged[key] = sorted(set(defaults + [str(v) for v in values.get(key, []) if str(v).strip()]), key=lambda val: _option_sort_key(key, val))
     for key, vals in values.items():
         if key not in merged:
-            merged[key] = sorted(set([str(v) for v in vals if str(v).strip()]))
+            merged[key] = sorted(set([str(v) for v in vals if str(v).strip()]), key=lambda val: _option_sort_key(key, val))
     return merged
 
 
