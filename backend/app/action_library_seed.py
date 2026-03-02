@@ -127,17 +127,17 @@ SEED_ACTIONS: list[tuple[str, str, str, str]] = [
 
 
 async def ensure_action_library_seed() -> int:
-    """Ensure mandatory Action Library seed items exist (idempotent)."""
+    """Seed mandatory Action Library items only on first run (empty collection)."""
     lib = collection('action_library')
     now = datetime.now(timezone.utc)
-    created_count = 0
 
+    existing_count = await lib.count_documents({})
+    if existing_count > 0:
+        return 0
+
+    docs = []
     for idx, (scope, category, tr, en) in enumerate(SEED_ACTIONS, start=1):
-        existing = await lib.find_one({'scope': scope, 'text_tr': tr})
-        if existing:
-            continue
-
-        await lib.insert_one(
+        docs.append(
             {
                 'scope': scope,
                 'category': category,
@@ -152,6 +152,8 @@ async def ensure_action_library_seed() -> int:
                 'updated_at': now,
             }
         )
-        created_count += 1
 
-    return created_count
+    if docs:
+        await lib.insert_many(docs)
+    return len(docs)
+
