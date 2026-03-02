@@ -8,15 +8,29 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
 
-class CustomerIn(StrictModel):
-    name: str
+class CustomerBranchIn(StrictModel):
+    branch_name: str
     tax_no: str | None = None
+    tax_office: str | None = None
     email: str | None = None
     phone: str | None = None
     address: str | None = None
     city: str | None = None
     country: str | None = None
     shipping_address: str | None = None
+
+
+class CustomerIn(StrictModel):
+    name: str
+    tax_no: str | None = None
+    tax_office: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    address: str | None = None
+    city: str | None = None
+    country: str | None = None
+    shipping_address: str | None = None
+    branches: list[CustomerBranchIn] = Field(default_factory=list)
 
 
 class ContactIn(StrictModel):
@@ -26,6 +40,7 @@ class ContactIn(StrictModel):
     phone: str | None = None
     title: str | None = None
     department: str | None = None
+    note: str | None = None
     is_default: bool = False
 
 
@@ -81,9 +96,32 @@ class ProductIn(StrictModel):
     seat_material: str | None = None
     stem_material: str | None = None
 
+    seat_sealing_size: str | None = None
+    seat_sealing_size_unit: Literal['mm', 'inch'] | None = None
+    seat_sealing_material: str | None = None
+    packing_size: str | None = None
+    packing_size_unit: Literal['mm', 'inch'] | None = None
+    packing_material: str | None = None
+    body_seal_size: str | None = None
+    body_seal_size_unit: Literal['mm', 'inch'] | None = None
+    body_seal_material: str | None = None
+    actuator_output_seat_size: str | None = None
+    actuator_output_seat_size_unit: Literal['mm', 'inch'] | None = None
+    actuator_output_seat_material: str | None = None
+
     actuator: ActuatorIn | None = None
     accessories: list[AccessoryIn] = Field(default_factory=list)
 
+
+
+
+class ProductOptionValueIn(StrictModel):
+    value: str
+
+
+class ProductOptionUpdateIn(StrictModel):
+    old_value: str
+    new_value: str
 
 class ReportActionItem(StrictModel):
     library_id: str | None = None
