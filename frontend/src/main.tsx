@@ -231,7 +231,7 @@ const isValidPhone = (v: string) => !v || phoneDigits(v).length === 10
 
 
 const TURKEY_TAX_OFFICES = ['Büyük Mükellefler', 'Kadıköy', 'Üsküdar', 'Beşiktaş', 'Şişli', 'Maslak', 'Bakırköy', 'Ankara Kızılay', 'Ankara Ostim', 'İzmir Konak', 'İzmir Karşıyaka', 'Bursa Osmangazi', 'Kocaeli', 'Antalya', 'Adana', 'Gaziantep', 'Mersin', 'Kayseri', 'Konya', 'Samsun']
-const TURKEY_CITIES = ['Adana','Adıyaman','Afyonkarahisar','Ağrı','Amasya','Ankara','Antalya','Artvin','Aydın','Balıkesir','Bilecik','Bingöl','Bitlis','Bolu','Burdur','Bursa','Çanakkale','Çankırı','Çorum','Denizli','Diyarbakır','Edirne','Elazığ','Erzincan','Erzurum','Eskişehir','Gaziantep','Giresun','Gümüşhane','Hakkari','Hatay','Isparta','Mersin','İstanbul','İzmir','Kars','Kastamonu','Kayseri','Kırklareli','Kırşehir','Kocaeli','Konya','Kütahya','Malatya','Manisa','Kahramanmaraş','Mardin','Muğla','Muş','Nevşehir','Niğde','Ordu','Rize','Sakarya','Samsun','Siirt','Sinop','Sivas','Tekirdağ','Tokat','Trabzon','Tunceli','Şanlıurfa','Uşak','Van','Yozgat','Zonguldak']
+const TURKEY_CITIES = ['Adana','Adıyaman','Afyonkarahisar','Ağrı','Aksaray','Amasya','Ankara','Antalya','Ardahan','Artvin','Aydın','Balıkesir','Bartın','Batman','Bayburt','Bilecik','Bingöl','Bitlis','Bolu','Burdur','Bursa','Çanakkale','Çankırı','Çorum','Denizli','Diyarbakır','Düzce','Edirne','Elazığ','Erzincan','Erzurum','Eskişehir','Gaziantep','Giresun','Gümüşhane','Hakkari','Hatay','Iğdır','Isparta','İstanbul','İzmir','Kahramanmaraş','Karabük','Karaman','Kars','Kastamonu','Kayseri','Kırıkkale','Kırklareli','Kırşehir','Kilis','Kocaeli','Konya','Kütahya','Malatya','Manisa','Mardin','Mersin','Muğla','Muş','Nevşehir','Niğde','Ordu','Osmaniye','Rize','Sakarya','Samsun','Siirt','Sinop','Sivas','Şanlıurfa','Şırnak','Tekirdağ','Tokat','Trabzon','Tunceli','Uşak','Van','Yalova','Yozgat','Zonguldak']
 const COUNTRY_OPTIONS = ['Türkiye', 'Almanya', 'Fransa', 'İtalya', 'İspanya', 'Hollanda', 'Belçika', 'Avusturya', 'İsviçre', 'Polonya', 'Romanya', 'Bulgaristan', 'Yunanistan', 'Çekya', 'Macaristan', 'Sırbistan', 'Birleşik Krallık', 'Rusya', 'Ukrayna', 'Azerbaycan', 'Gürcistan', 'Ermenistan', 'İran', 'Irak', 'Kazakistan', 'Özbekistan', 'Hindistan', 'Çin', 'Japonya', 'Güney Kore', 'Suudi Arabistan', 'Birleşik Arap Emirlikleri', 'Katar', 'Mısır']
 const cityOptionsForCountry = (country: string) => country === 'Türkiye' ? TURKEY_CITIES : []
 
@@ -770,26 +770,16 @@ function SimpleCrudPage({ title, endpoint, fields }: { title: string; endpoint: 
 function ReportsPage() {
   const { t } = useI18n()
   const navigate = useNavigate()
-  const [searchType, setSearchType] = React.useState('tag_no')
-  const [searchValue, setSearchValue] = React.useState('')
-  const [statusBucket, setStatusBucket] = React.useState('')
-  const [sortBy, setSortBy] = React.useState('')
-  const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc')
   const [rows, setRows] = React.useState<any[]>([])
+  const [statusBucket, setStatusBucket] = React.useState('')
+  const [sortBy, setSortBy] = React.useState<'report_no' | 'customer_short_name' | 'customer_code' | 'arrival_date' | 'shipping_date' | 'status'>('arrival_date')
+  const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc')
 
   const load = React.useCallback(async () => {
     const qs = new URLSearchParams()
-    if (searchValue.trim()) {
-      qs.set('search_type', searchType)
-      qs.set('search_value', searchValue.trim())
-    }
     if (statusBucket) qs.set('status_bucket', statusBucket)
-    if (sortBy) {
-      qs.set('sort_by', sortBy)
-      qs.set('sort_order', sortOrder)
-    }
     setRows(await api<any[]>(`/api/reports?${qs.toString()}`))
-  }, [searchType, searchValue, statusBucket, sortBy, sortOrder])
+  }, [statusBucket])
 
   React.useEffect(() => { void load() }, [load])
 
@@ -804,16 +794,55 @@ function ReportsPage() {
     if (res?.url) window.open(resolveApiUrl(res.url), '_blank')
   }
 
+  const setSort = (field: 'report_no' | 'customer_short_name' | 'customer_code' | 'arrival_date' | 'shipping_date' | 'status') => {
+    if (sortBy === field) setSortOrder((p) => p === 'asc' ? 'desc' : 'asc')
+    else {
+      setSortBy(field)
+      setSortOrder((field === 'customer_short_name' || field === 'status') ? 'asc' : 'desc')
+    }
+  }
+
+  const arrow = (field: 'report_no' | 'customer_short_name' | 'customer_code' | 'arrival_date' | 'shipping_date' | 'status') => sortBy === field ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'
+
+  const visibleRows = React.useMemo(() => {
+    const list = [...rows]
+    const dir = sortOrder === 'asc' ? 1 : -1
+    list.sort((a, b) => {
+      if (sortBy === 'report_no') return String(a.report_no || '').localeCompare(String(b.report_no || ''), 'tr') * dir
+      if (sortBy === 'customer_short_name') return String(a.customer_short_name || '').localeCompare(String(b.customer_short_name || ''), 'tr') * dir
+      if (sortBy === 'customer_code') return ((Number(a.customer_code) || 0) - (Number(b.customer_code) || 0)) * dir
+      if (sortBy === 'arrival_date') return String(a.arrival_date || '').localeCompare(String(b.arrival_date || '')) * dir
+      if (sortBy === 'shipping_date') return String(a.shipping_date || '').localeCompare(String(b.shipping_date || '')) * dir
+      return String(a.status || '').localeCompare(String(b.status || ''), 'tr') * dir
+    })
+    return list
+  }, [rows, sortBy, sortOrder])
+
   return <div className='space-y-6'><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><h1 className='mb-4 text-2xl font-semibold'>{t('reports')}</h1>
-    <div className='grid gap-3 md:grid-cols-5'>
-      <select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={searchType} onChange={(e) => { setSearchType(e.target.value); setSearchValue('') }}><option value='tag_no'>Tag No ile ara</option><option value='customer_no'>Müşteri No ile ara</option><option value='serial_no'>Seri No ile ara</option><option value='model_no'>Model No ile ara</option></select>
-      <Input placeholder='Arama değeri' value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
-      <select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={sortBy} onChange={(e) => setSortBy(e.target.value)}><option value=''>Sıralama yok</option><option value='customer_short_name'>Müşteri kısa adına göre</option><option value='customer_code'>Müşteri noya göre</option><option value='arrival_date'>Geliş tarihine göre</option><option value='shipping_date'>Gidiş tarihine göre</option></select>
-      <select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={sortOrder} onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}><option value='asc'>Artan</option><option value='desc'>Azalan</option></select>
-      <select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={statusBucket} onChange={(e) => setStatusBucket(e.target.value)}><option value=''>Durum: Tümü</option><option value='pending'>Durum: Bekleyen işler</option><option value='completed'>Durum: Tamamlanan işler</option></select>
+    <div className='flex flex-wrap items-center gap-2'>
+      <Label>Durum Bayrağı:</Label>
+      <select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={statusBucket} onChange={(e) => setStatusBucket(e.target.value)}><option value=''>Tümü</option><option value='pending'>Bekleyen işler</option><option value='completed'>Tamamlanan işler</option></select>
+      <Button variant='secondary' onClick={() => { setSortBy('arrival_date'); setSortOrder('desc') }}>Sıralamayı Sıfırla</Button>
     </div>
-    <div className='mt-3 flex gap-2'><Button onClick={() => { void load() }}>{t('filter')}</Button><Button variant='secondary' onClick={() => { setSearchType('tag_no'); setSearchValue(''); setStatusBucket(''); setSortBy(''); setSortOrder('asc') }}>Temizle</Button></div>
-  </section><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70 space-y-2'>{rows.length === 0 ? <p className='text-sm text-slate-500'>Rapor bulunamadı</p> : rows.map((r) => <div key={r.id} className='flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm'><div>{r.report_no} · {r.status}<div className='text-xs text-slate-500'>{r.customer_short_name || '-'} · {r.customer_code || '-'} · {r.arrival_date ? String(r.arrival_date).slice(0,10) : '-'} / {r.shipping_date ? String(r.shipping_date).slice(0,10) : '-'}</div></div><div className='flex gap-2'><Button variant='secondary' onClick={() => navigate(`/reports/new?reportId=${r.id}`)}><Eye size={14} className='mr-1' />İncele</Button><Button variant='ghost' onClick={() => { void printReport(r.id) }}><Printer size={14} className='mr-1' />Yazdır</Button><Button variant='ghost' onClick={() => navigate(`/reports/new?reportId=${r.id}`)}><Pencil size={14} className='mr-1' />Düzelt</Button><Button variant='ghost' onClick={() => { void removeReport(r.id) }}><Trash2 size={14} className='mr-1' />Sil</Button></div></div>)}</section></div>
+  </section><section className='rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200/70 overflow-x-auto'>
+    <table className='w-full min-w-[1120px] text-sm'>
+      <thead>
+        <tr className='border-b text-slate-500'>
+          <th className='px-3 py-2 text-left'><button type='button' className='inline-flex items-center gap-1' onClick={() => setSort('report_no')}>Rapor No {arrow('report_no')}</button></th>
+          <th className='px-3 py-2 text-left'><button type='button' className='inline-flex items-center gap-1' onClick={() => setSort('customer_short_name')}>Müşteri (Kısa Ad) {arrow('customer_short_name')}</button></th>
+          <th className='px-3 py-2 text-left'><button type='button' className='inline-flex items-center gap-1' onClick={() => setSort('customer_code')}>Müşteri No {arrow('customer_code')}</button></th>
+          <th className='px-3 py-2 text-left'><button type='button' className='inline-flex items-center gap-1' onClick={() => setSort('arrival_date')}>Geliş {arrow('arrival_date')}</button></th>
+          <th className='px-3 py-2 text-left'><button type='button' className='inline-flex items-center gap-1' onClick={() => setSort('shipping_date')}>Gidiş {arrow('shipping_date')}</button></th>
+          <th className='px-3 py-2 text-left'><button type='button' className='inline-flex items-center gap-1' onClick={() => setSort('status')}>Durum {arrow('status')}</button></th>
+          <th className='px-3 py-2 text-right'>İşlemler</th>
+        </tr>
+      </thead>
+      <tbody>
+        {visibleRows.length === 0 && <tr><td colSpan={7} className='px-3 py-6 text-center text-slate-500'>Rapor bulunamadı</td></tr>}
+        {visibleRows.map((r) => <tr key={r.id} className='border-b last:border-b-0'><td className='px-3 py-2 font-medium text-blue-700'>{r.report_no}</td><td className='px-3 py-2'>{r.customer_short_name || '-'}</td><td className='px-3 py-2'>{r.customer_code || '-'}</td><td className='px-3 py-2'>{r.arrival_date ? String(r.arrival_date).slice(0,10) : '-'}</td><td className='px-3 py-2'>{r.shipping_date ? String(r.shipping_date).slice(0,10) : '-'}</td><td className='px-3 py-2'>{r.status}</td><td className='px-3 py-2'><div className='flex justify-end gap-1'><Button variant='secondary' onClick={() => navigate(`/reports/new?reportId=${r.id}`)}><Eye size={14} className='mr-1' />İncele</Button><Button variant='ghost' onClick={() => { void printReport(r.id) }}><Printer size={14} className='mr-1' />Yazdır</Button><Button variant='ghost' onClick={() => navigate(`/reports/new?reportId=${r.id}`)}><Pencil size={14} className='mr-1' />Düzelt</Button><Button variant='ghost' onClick={() => { void removeReport(r.id) }}><Trash2 size={14} className='mr-1' />Sil</Button></div></td></tr>)}
+      </tbody>
+    </table>
+  </section></div>
 }
 
 function IssuersReportsPage() {
