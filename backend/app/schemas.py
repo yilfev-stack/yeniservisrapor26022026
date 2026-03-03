@@ -22,6 +22,8 @@ class CustomerBranchIn(StrictModel):
 
 class CustomerIn(StrictModel):
     name: str
+    short_name: str | None = None
+    customer_code: int | None = None
     tax_no: str | None = None
     tax_office: str | None = None
     email: str | None = None
@@ -178,10 +180,13 @@ class ActionLibraryIn(StrictModel):
 
 class CompanyProfileIn(StrictModel):
     name: str
+    short_name: str | None = None
     legal_company_name: str | None = None
     legal_text: str | None = None
     legal_notes: list[str] = Field(default_factory=list)
     address: str | None = None
+    city: str | None = None
+    country: str | None = None
     phone: str | None = None
     email: str | None = None
     signature_labels: dict = Field(default_factory=dict)

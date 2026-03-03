@@ -198,6 +198,8 @@ type CustomerContact = {
 
 type CustomerForm = {
   name: string
+  short_name: string
+  customer_code: string
   tax_no: string
   tax_office: string
   email: string
@@ -209,8 +211,8 @@ type CustomerForm = {
   branches: CustomerBranchForm[]
 }
 
-const emptyBranch = (): CustomerBranchForm => ({ branch_name: '', tax_no: '', tax_office: '', email: '', phone: '', address: '', shipping_address: '', city: '', country: '' })
-const emptyCustomer = (): CustomerForm => ({ name: '', tax_no: '', tax_office: '', email: '', phone: '', address: '', shipping_address: '', city: '', country: '', branches: [] })
+const emptyBranch = (): CustomerBranchForm => ({ branch_name: '', tax_no: '', tax_office: '', email: '', phone: '', address: '', shipping_address: '', city: '', country: 'Türkiye' })
+const emptyCustomer = (): CustomerForm => ({ name: '', short_name: '', customer_code: '', tax_no: '', tax_office: '', email: '', phone: '', address: '', shipping_address: '', city: '', country: 'Türkiye', branches: [] })
 const emptyContact = (): CustomerContact => ({ name: '', title: '', email: '', phone: '', note: '' })
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -226,6 +228,12 @@ const formatPhone = (raw: string) => {
 }
 const isValidEmail = (v: string) => !v || EMAIL_RE.test(v)
 const isValidPhone = (v: string) => !v || phoneDigits(v).length === 10
+
+
+const TURKEY_TAX_OFFICES = ['Büyük Mükellefler', 'Kadıköy', 'Üsküdar', 'Beşiktaş', 'Şişli', 'Maslak', 'Bakırköy', 'Ankara Kızılay', 'Ankara Ostim', 'İzmir Konak', 'İzmir Karşıyaka', 'Bursa Osmangazi', 'Kocaeli', 'Antalya', 'Adana', 'Gaziantep', 'Mersin', 'Kayseri', 'Konya', 'Samsun']
+const TURKEY_CITIES = ['Adana','Adıyaman','Afyonkarahisar','Ağrı','Amasya','Ankara','Antalya','Artvin','Aydın','Balıkesir','Bilecik','Bingöl','Bitlis','Bolu','Burdur','Bursa','Çanakkale','Çankırı','Çorum','Denizli','Diyarbakır','Edirne','Elazığ','Erzincan','Erzurum','Eskişehir','Gaziantep','Giresun','Gümüşhane','Hakkari','Hatay','Isparta','Mersin','İstanbul','İzmir','Kars','Kastamonu','Kayseri','Kırklareli','Kırşehir','Kocaeli','Konya','Kütahya','Malatya','Manisa','Kahramanmaraş','Mardin','Muğla','Muş','Nevşehir','Niğde','Ordu','Rize','Sakarya','Samsun','Siirt','Sinop','Sivas','Tekirdağ','Tokat','Trabzon','Tunceli','Şanlıurfa','Uşak','Van','Yozgat','Zonguldak']
+const COUNTRY_OPTIONS = ['Türkiye', 'Almanya', 'Fransa', 'İtalya', 'İspanya', 'Hollanda', 'Belçika', 'Avusturya', 'İsviçre', 'Polonya', 'Romanya', 'Bulgaristan', 'Yunanistan', 'Çekya', 'Macaristan', 'Sırbistan', 'Birleşik Krallık', 'Rusya', 'Ukrayna', 'Azerbaycan', 'Gürcistan', 'Ermenistan', 'İran', 'Irak', 'Kazakistan', 'Özbekistan', 'Hindistan', 'Çin', 'Japonya', 'Güney Kore', 'Suudi Arabistan', 'Birleşik Arap Emirlikleri', 'Katar', 'Mısır']
+const cityOptionsForCountry = (country: string) => country === 'Türkiye' ? TURKEY_CITIES : []
 
 function CustomersPage() {
   const [rows, setRows] = React.useState<any[]>([])
@@ -257,6 +265,8 @@ function CustomersPage() {
     setCustomerId(id)
     setForm({
       name: customer.name || '',
+      short_name: customer.short_name || '',
+      customer_code: customer.customer_code ? String(customer.customer_code) : '',
       tax_no: customer.tax_no || '',
       tax_office: customer.tax_office || '',
       email: customer.email || '',
@@ -297,6 +307,8 @@ function CustomersPage() {
     const payload = {
       ...form,
       name: form.name.trim(),
+      short_name: form.short_name.trim(),
+      customer_code: form.customer_code ? Number(form.customer_code) : undefined,
       shipping_address: form.shipping_address.trim(),
       phone: phoneDigits(form.phone),
       branches: form.branches.map((b) => ({ ...b, phone: phoneDigits(b.phone) })),
@@ -326,7 +338,7 @@ function CustomersPage() {
   }
 
   if (!customerId && !editing) {
-    return <div className='space-y-6'><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><div className='mb-4 flex items-center justify-between'><h1 className='text-2xl font-semibold'>Müşteriler</h1><Button onClick={openNew}><Plus size={14} className='mr-1' />Yeni Müşteri</Button></div>{rows.length === 0 ? <p className='text-sm text-slate-500'>Kayıt yok</p> : <div className='space-y-2'>{rows.map((r) => <div key={r.id} className='flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm'><div><p className='font-medium'>{r.name}</p><p className='text-slate-500'>{r.tax_no || '-'} · {r.city || '-'}</p></div><Button variant='secondary' onClick={() => { void openExisting(r.id) }}>Detayı Aç</Button></div>)}</div>}</section></div>
+    return <div className='space-y-6'><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><div className='mb-4 flex items-center justify-between'><h1 className='text-2xl font-semibold'>Müşteriler</h1><Button onClick={openNew}><Plus size={14} className='mr-1' />Yeni Müşteri</Button></div>{rows.length === 0 ? <p className='text-sm text-slate-500'>Kayıt yok</p> : <div className='space-y-2'>{rows.map((r) => <div key={r.id} className='flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm'><div><p className='font-medium'>{r.name} {r.short_name ? `(${r.short_name})` : ''}</p><p className='text-slate-500'>No: {r.customer_code || '-'} · {r.tax_no || '-'} · {r.city || '-'}</p></div><Button variant='secondary' onClick={() => { void openExisting(r.id) }}>Detayı Aç</Button></div>)}</div>}</section></div>
   }
 
   return <div className='mx-auto max-w-[980px] space-y-6'><div className='flex items-center justify-between'><Button variant='ghost' onClick={() => { setCustomerId(null); setEditing(false) }}><ArrowLeft size={14} className='mr-1' />Geri</Button>{!editing ? <Button onClick={() => setEditing(true)}>Düzenle</Button> : <div className='flex gap-2'><Button variant='secondary' onClick={() => { if (!customerId) { setEditing(false); setCustomerId(null) } else { void openExisting(customerId) } }}>İptal</Button><Button onClick={() => { void save() }}>Kaydet</Button></div>}</div>
@@ -334,21 +346,23 @@ function CustomersPage() {
       <h1 className='mb-5 text-2xl font-semibold'>{customerId ? 'Müşteriyi Düzenle' : 'Yeni Müşteri'}</h1>
       <div className='grid gap-3 md:grid-cols-2'>
         <div className='md:col-span-2'><Label>Müşteri Adı *</Label><Input disabled={!editing} value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} /></div>
+        <div><Label>Kısa İsim</Label><Input disabled={!editing} value={form.short_name} onChange={(e) => setForm((p) => ({ ...p, short_name: e.target.value }))} placeholder='Örn: DEMART' /></div>
+        <div><Label>Müşteri Kodu</Label><Input disabled value={form.customer_code} placeholder='Otomatik' /></div>
         <div><Label>Vergi No</Label><Input disabled={!editing} value={form.tax_no} onChange={(e) => setForm((p) => ({ ...p, tax_no: e.target.value }))} /></div>
-        <div><Label>Vergi Dairesi</Label><Input disabled={!editing} value={form.tax_office} onChange={(e) => setForm((p) => ({ ...p, tax_office: e.target.value }))} /></div>
+        <div><Label>Vergi Dairesi</Label><Input list='tax-office-list' disabled={!editing} value={form.tax_office} onChange={(e) => setForm((p) => ({ ...p, tax_office: e.target.value }))} /></div><datalist id='tax-office-list'>{TURKEY_TAX_OFFICES.map((v) => <option key={v} value={v} />)}</datalist>
         <div><Label>E-posta</Label><Input disabled={!editing} value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} /></div>
         <div><Label>Telefon</Label><Input disabled={!editing} value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: formatPhone(e.target.value) }))} placeholder='+90 535 109 10 02' /></div>
         <div className='md:col-span-2'><Label>Adres</Label><Textarea disabled={!editing} value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} /></div>
         <div className='md:col-span-2'><Label>Sevk Adresi *</Label><Textarea disabled={!editing} value={form.shipping_address} onChange={(e) => setForm((p) => ({ ...p, shipping_address: e.target.value }))} /></div>
-        <div><Label>Şehir</Label><Input disabled={!editing} value={form.city} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} /></div>
-        <div><Label>Ülke</Label><Input disabled={!editing} value={form.country} onChange={(e) => setForm((p) => ({ ...p, country: e.target.value }))} /></div>
+        <div><Label>Şehir</Label><Input list='customer-city-list' disabled={!editing} value={form.city} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} /></div><datalist id='customer-city-list'>{cityOptionsForCountry(form.country).map((v) => <option key={v} value={v} />)}</datalist>
+        <div><Label>Ülke</Label><Input list='country-list' disabled={!editing} value={form.country} onChange={(e) => setForm((p) => ({ ...p, country: e.target.value, city: e.target.value === 'Türkiye' ? p.city : p.city }))} /></div><datalist id='country-list'>{COUNTRY_OPTIONS.map((v) => <option key={v} value={v} />)}</datalist>
       </div>
     </section>
 
     <section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70 space-y-3'>
       <div className='flex items-center justify-between'><h2 className='text-xl font-semibold'>Şubeler</h2>{editing && <Button variant='secondary' onClick={() => setForm((p) => ({ ...p, branches: [...p.branches, emptyBranch()] }))}>+ Şube Ekle</Button>}</div>
       {form.branches.length === 0 && <p className='text-sm text-slate-500'>Şube yok</p>}
-      {form.branches.map((b, idx) => <div key={idx} className='rounded-xl border border-slate-200 p-4'><div className='mb-2 flex items-center justify-between'><p className='font-medium'>Şube #{idx + 1}</p>{editing && <Button variant='ghost' onClick={() => setForm((p) => ({ ...p, branches: p.branches.filter((_, i) => i !== idx) }))}>Sil</Button>}</div><div className='grid gap-3 md:grid-cols-2'><div className='md:col-span-2'><Label>Şube Adı *</Label><Input disabled={!editing} value={b.branch_name} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, branch_name: e.target.value } : x) }))} /></div><div><Label>Vergi No</Label><Input disabled={!editing} value={b.tax_no} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, tax_no: e.target.value } : x) }))} /></div><div><Label>Vergi Dairesi</Label><Input disabled={!editing} value={b.tax_office} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, tax_office: e.target.value } : x) }))} /></div><div><Label>E-posta</Label><Input disabled={!editing} value={b.email} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, email: e.target.value } : x) }))} /></div><div><Label>Telefon</Label><Input disabled={!editing} value={b.phone} placeholder='+90 535 109 10 02' onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, phone: formatPhone(e.target.value) } : x) }))} /></div><div className='md:col-span-2'><Label>Adres</Label><Textarea disabled={!editing} value={b.address} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, address: e.target.value } : x) }))} /></div><div className='md:col-span-2'><Label>Sevk Adresi *</Label><Textarea disabled={!editing} value={b.shipping_address} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, shipping_address: e.target.value } : x) }))} /></div><div><Label>Şehir</Label><Input disabled={!editing} value={b.city} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, city: e.target.value } : x) }))} /></div><div><Label>Ülke</Label><Input disabled={!editing} value={b.country} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, country: e.target.value } : x) }))} /></div></div></div>)}
+      {form.branches.map((b, idx) => <div key={idx} className='rounded-xl border border-slate-200 p-4'><div className='mb-2 flex items-center justify-between'><p className='font-medium'>Şube #{idx + 1}</p>{editing && <Button variant='ghost' onClick={() => setForm((p) => ({ ...p, branches: p.branches.filter((_, i) => i !== idx) }))}>Sil</Button>}</div><div className='grid gap-3 md:grid-cols-2'><div className='md:col-span-2'><Label>Şube Adı *</Label><Input disabled={!editing} value={b.branch_name} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, branch_name: e.target.value } : x) }))} /></div><div><Label>Vergi No</Label><Input disabled={!editing} value={b.tax_no} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, tax_no: e.target.value } : x) }))} /></div><div><Label>Vergi Dairesi</Label><Input list='tax-office-list' disabled={!editing} value={b.tax_office} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, tax_office: e.target.value } : x) }))} /></div><div><Label>E-posta</Label><Input disabled={!editing} value={b.email} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, email: e.target.value } : x) }))} /></div><div><Label>Telefon</Label><Input disabled={!editing} value={b.phone} placeholder='+90 535 109 10 02' onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, phone: formatPhone(e.target.value) } : x) }))} /></div><div className='md:col-span-2'><Label>Adres</Label><Textarea disabled={!editing} value={b.address} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, address: e.target.value } : x) }))} /></div><div className='md:col-span-2'><Label>Sevk Adresi *</Label><Textarea disabled={!editing} value={b.shipping_address} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, shipping_address: e.target.value } : x) }))} /></div><div><Label>Şehir</Label><Input list={`branch-city-list-${idx}`} disabled={!editing} value={b.city} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, city: e.target.value } : x) }))} /></div><div><Label>Ülke</Label><Input list='country-list' disabled={!editing} value={b.country} onChange={(e) => setForm((p) => ({ ...p, branches: p.branches.map((x, i) => i === idx ? { ...x, country: e.target.value } : x) }))} /></div><datalist id={`branch-city-list-${idx}`}>{cityOptionsForCountry(b.country).map((v) => <option key={v} value={v} />)}</datalist></div></div>)}
     </section>
 
     <section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70 space-y-3'>
@@ -756,21 +770,28 @@ function SimpleCrudPage({ title, endpoint, fields }: { title: string; endpoint: 
 function ReportsPage() {
   const { t } = useI18n()
   const navigate = useNavigate()
-  const [filters, setFilters] = React.useState<any>({ customer_id: '', contact_id: '', issuer_id: '', status: '', date_from: '', date_to: '', brand: '', model: '', serial_no: '', tag_no: '' })
+  const [searchType, setSearchType] = React.useState('tag_no')
+  const [searchValue, setSearchValue] = React.useState('')
+  const [statusBucket, setStatusBucket] = React.useState('')
+  const [sortBy, setSortBy] = React.useState('')
+  const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc')
   const [rows, setRows] = React.useState<any[]>([])
-  const [customers, setCustomers] = React.useState<any[]>([])
-  const [issuers, setIssuers] = React.useState<any[]>([])
 
   const load = React.useCallback(async () => {
-    const qs = new URLSearchParams(Object.entries(filters).filter(([, v]) => v).map(([k, v]) => [k, String(v)]))
+    const qs = new URLSearchParams()
+    if (searchValue.trim()) {
+      qs.set('search_type', searchType)
+      qs.set('search_value', searchValue.trim())
+    }
+    if (statusBucket) qs.set('status_bucket', statusBucket)
+    if (sortBy) {
+      qs.set('sort_by', sortBy)
+      qs.set('sort_order', sortOrder)
+    }
     setRows(await api<any[]>(`/api/reports?${qs.toString()}`))
-  }, [filters])
+  }, [searchType, searchValue, statusBucket, sortBy, sortOrder])
 
-  React.useEffect(() => {
-    void api<any[]>('/api/customers').then(setCustomers).catch(() => setCustomers([]))
-    void api<any[]>('/api/settings/issuers').then(setIssuers).catch(() => setIssuers([]))
-    void load()
-  }, [load])
+  React.useEffect(() => { void load() }, [load])
 
   const removeReport = async (id: string) => {
     if (!window.confirm('Rapor silinsin mi?')) return
@@ -783,20 +804,16 @@ function ReportsPage() {
     if (res?.url) window.open(resolveApiUrl(res.url), '_blank')
   }
 
-  const statusOptions = ['draft', 'pre_report', 'quotation_sent', 'awaiting_approval', 'approved', 'in_service', 'final_report', 'archived']
-
-  return <div className='space-y-6'><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><h1 className='mb-4 text-2xl font-semibold'>{t('reports')}</h1><div className='grid gap-3 md:grid-cols-3'>
-    <select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={filters.customer_id} onChange={(e) => setFilters((p: any) => ({ ...p, customer_id: e.target.value }))}><option value=''>Müşteri (tümü)</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
-    <Input placeholder='contact_id (opsiyonel)' value={filters.contact_id} onChange={(e) => setFilters((p: any) => ({ ...p, contact_id: e.target.value }))} />
-    <select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={filters.issuer_id} onChange={(e) => setFilters((p: any) => ({ ...p, issuer_id: e.target.value }))}><option value=''>Bayi (tümü)</option>{issuers.map((i) => <option key={i.id} value={i.id}>{i.name || i.id}</option>)}</select>
-    <div className='flex gap-2'><select className='h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm' value={filters.status} onChange={(e) => setFilters((p: any) => ({ ...p, status: e.target.value }))}><option value=''>Durum (tümü)</option>{statusOptions.map((s) => <option key={s} value={s}>{s}</option>)}</select><Input placeholder='veya elle durum yaz' value={filters.status} onChange={(e) => setFilters((p: any) => ({ ...p, status: e.target.value }))} /></div>
-    <Input type='date' value={filters.date_from} onChange={(e) => setFilters((p: any) => ({ ...p, date_from: e.target.value }))} />
-    <Input type='date' value={filters.date_to} onChange={(e) => setFilters((p: any) => ({ ...p, date_to: e.target.value }))} />
-    <Input placeholder='brand' value={filters.brand} onChange={(e) => setFilters((p: any) => ({ ...p, brand: e.target.value }))} />
-    <Input placeholder='model' value={filters.model} onChange={(e) => setFilters((p: any) => ({ ...p, model: e.target.value }))} />
-    <Input placeholder='serial_no' value={filters.serial_no} onChange={(e) => setFilters((p: any) => ({ ...p, serial_no: e.target.value }))} />
-    <Input placeholder='tag_no' value={filters.tag_no} onChange={(e) => setFilters((p: any) => ({ ...p, tag_no: e.target.value }))} />
-  </div><div className='mt-3 flex gap-2'><Button onClick={() => { void load() }}>{t('filter')}</Button><Button variant='secondary' onClick={() => { setFilters({ customer_id: '', contact_id: '', issuer_id: '', status: '', date_from: '', date_to: '', brand: '', model: '', serial_no: '', tag_no: '' }) }}>Temizle</Button></div></section><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70 space-y-2'>{rows.map((r) => <div key={r.id} className='flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm'><div>{r.report_no} · {r.status}</div><div className='flex gap-2'><Button variant='secondary' onClick={() => navigate(`/reports/new?reportId=${r.id}`)}><Eye size={14} className='mr-1' />İncele/Düzenle</Button><Button variant='ghost' onClick={() => { void printReport(r.id) }}><Printer size={14} className='mr-1' />Yazdır</Button><Button variant='ghost' onClick={() => navigate(`/reports/new?reportId=${r.id}`)}><Pencil size={14} className='mr-1' />Revize</Button><Button variant='ghost' onClick={() => { void removeReport(r.id) }}><Trash2 size={14} className='mr-1' />Sil</Button></div></div>)}</section></div>
+  return <div className='space-y-6'><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><h1 className='mb-4 text-2xl font-semibold'>{t('reports')}</h1>
+    <div className='grid gap-3 md:grid-cols-5'>
+      <select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={searchType} onChange={(e) => { setSearchType(e.target.value); setSearchValue('') }}><option value='tag_no'>Tag No ile ara</option><option value='customer_no'>Müşteri No ile ara</option><option value='serial_no'>Seri No ile ara</option><option value='model_no'>Model No ile ara</option></select>
+      <Input placeholder='Arama değeri' value={searchValue} onChange={(e) => setSearchValue(e.target.value)} />
+      <select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={sortBy} onChange={(e) => setSortBy(e.target.value)}><option value=''>Sıralama yok</option><option value='customer_short_name'>Müşteri kısa adına göre</option><option value='customer_code'>Müşteri noya göre</option><option value='arrival_date'>Geliş tarihine göre</option><option value='shipping_date'>Gidiş tarihine göre</option></select>
+      <select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={sortOrder} onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}><option value='asc'>Artan</option><option value='desc'>Azalan</option></select>
+      <select className='h-10 rounded-md border border-slate-200 bg-white px-3 text-sm' value={statusBucket} onChange={(e) => setStatusBucket(e.target.value)}><option value=''>Durum: Tümü</option><option value='pending'>Durum: Bekleyen işler</option><option value='completed'>Durum: Tamamlanan işler</option></select>
+    </div>
+    <div className='mt-3 flex gap-2'><Button onClick={() => { void load() }}>{t('filter')}</Button><Button variant='secondary' onClick={() => { setSearchType('tag_no'); setSearchValue(''); setStatusBucket(''); setSortBy(''); setSortOrder('asc') }}>Temizle</Button></div>
+  </section><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70 space-y-2'>{rows.length === 0 ? <p className='text-sm text-slate-500'>Rapor bulunamadı</p> : rows.map((r) => <div key={r.id} className='flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm'><div>{r.report_no} · {r.status}<div className='text-xs text-slate-500'>{r.customer_short_name || '-'} · {r.customer_code || '-'} · {r.arrival_date ? String(r.arrival_date).slice(0,10) : '-'} / {r.shipping_date ? String(r.shipping_date).slice(0,10) : '-'}</div></div><div className='flex gap-2'><Button variant='secondary' onClick={() => navigate(`/reports/new?reportId=${r.id}`)}><Eye size={14} className='mr-1' />İncele</Button><Button variant='ghost' onClick={() => { void printReport(r.id) }}><Printer size={14} className='mr-1' />Yazdır</Button><Button variant='ghost' onClick={() => navigate(`/reports/new?reportId=${r.id}`)}><Pencil size={14} className='mr-1' />Düzelt</Button><Button variant='ghost' onClick={() => { void removeReport(r.id) }}><Trash2 size={14} className='mr-1' />Sil</Button></div></div>)}</section></div>
 }
 
 function IssuersReportsPage() {
@@ -818,10 +835,10 @@ function SettingsPage() {
   const { t } = useI18n()
   const [profiles, setProfiles] = React.useState<any[]>([])
   const [open, setOpen] = React.useState(false)
-  const [form, setForm] = React.useState({ name: '', legal_text: '', address: '', phone: '', email: '' })
+  const [form, setForm] = React.useState({ name: '', short_name: '', legal_text: '', address: '', city: '', country: 'Türkiye', phone: '', email: '' })
   const load = () => api<any[]>('/api/settings/company-profiles').then(setProfiles).catch(() => setProfiles([]))
   React.useEffect(() => { void load() }, [])
-  return <div className='space-y-6'><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><div className='mb-4 flex items-center justify-between'><h1 className='text-2xl font-semibold'>{t('companyProfiles')}</h1><Button onClick={() => setOpen(true)}>{t('create')}</Button></div>{profiles.map((p) => <div key={p.id} className='mb-2 rounded-xl border border-slate-200 p-3 text-sm'>{p.name}</div>)}</section><DialogRoot open={open} onOpenChange={setOpen}><DialogContent><div className='space-y-3'><Label>{t('name')}</Label><Input value={form.name} onChange={(e) => setForm((x) => ({ ...x, name: e.target.value }))} /><Label>{t('legalText')}</Label><Textarea value={form.legal_text} onChange={(e) => setForm((x) => ({ ...x, legal_text: e.target.value }))} /><Label>{t('address')}</Label><Input value={form.address} onChange={(e) => setForm((x) => ({ ...x, address: e.target.value }))} /><Label>{t('phone')}</Label><Input value={form.phone} onChange={(e) => setForm((x) => ({ ...x, phone: e.target.value }))} /><Label>{t('email')}</Label><Input value={form.email} onChange={(e) => setForm((x) => ({ ...x, email: e.target.value }))} /><Button onClick={async () => { await api('/api/settings/company-profiles', { method: 'POST', body: JSON.stringify(form) }); toast.success(t('save')); setOpen(false); load() }}>{t('save')}</Button></div></DialogContent></DialogRoot></div>
+  return <div className='space-y-6'><section className='rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70'><div className='mb-4 flex items-center justify-between'><h1 className='text-2xl font-semibold'>{t('companyProfiles')}</h1><Button onClick={() => setOpen(true)}>{t('create')}</Button></div>{profiles.map((p) => <div key={p.id} className='mb-2 rounded-xl border border-slate-200 p-3 text-sm'>{p.name}</div>)}</section><DialogRoot open={open} onOpenChange={setOpen}><DialogContent><div className='space-y-3'><Label>{t('name')}</Label><Input value={form.name} onChange={(e) => setForm((x) => ({ ...x, name: e.target.value }))} /><Label>Kısa İsim</Label><Input value={form.short_name} onChange={(e) => setForm((x) => ({ ...x, short_name: e.target.value }))} /><Label>{t('legalText')}</Label><Textarea value={form.legal_text} onChange={(e) => setForm((x) => ({ ...x, legal_text: e.target.value }))} /><Label>{t('address')}</Label><Input value={form.address} onChange={(e) => setForm((x) => ({ ...x, address: e.target.value }))} /><Label>Şehir</Label><Input list='issuer-city-list' value={form.city} onChange={(e) => setForm((x) => ({ ...x, city: e.target.value }))} /><datalist id='issuer-city-list'>{cityOptionsForCountry(form.country).map((v) => <option key={v} value={v} />)}</datalist><Label>Ülke</Label><Input list='country-list' value={form.country} onChange={(e) => setForm((x) => ({ ...x, country: e.target.value }))} /><Label>{t('phone')}</Label><Input value={form.phone} onChange={(e) => setForm((x) => ({ ...x, phone: e.target.value }))} /><Label>{t('email')}</Label><Input value={form.email} onChange={(e) => setForm((x) => ({ ...x, email: e.target.value }))} /><Button onClick={async () => { await api('/api/settings/company-profiles', { method: 'POST', body: JSON.stringify(form) }); toast.success(t('save')); setOpen(false); load() }}>{t('save')}</Button></div></DialogContent></DialogRoot></div>
 }
 
 function ReportWizardPage() {

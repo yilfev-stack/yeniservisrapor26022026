@@ -118,7 +118,7 @@ def _build_pdf_html(report: dict, before: list[dict], after: list[dict], options
         <div>Report No: {report.get('report_no','')} | Revision: {report.get('revision_no',1)} | Language: {options.language}</div>
       </div>
       <h3>General</h3>
-      <p>Customer: {report.get('customer_id','')} | Contact: {report.get('contact_id','')} | Status: {report.get('status','')}</p>
+      <p>Customer: {report.get('customer_name') or report.get('customer_id','')} | Short: {report.get('customer_short_name','-')} | Code: {report.get('customer_code','-')} | Contact: {report.get('contact_id','')} | Status: {report.get('status','')}</p>
       <h3>Complaint</h3><p>{' '.join([x.get('text','') for x in report.get('blocks',{}).get('complaint',[])])}</p>
       <h3>Problems</h3><p>{' '.join([x.get('text','') for x in report.get('blocks',{}).get('problems',[])])}</p>
       <h3>Actions</h3><p>{' '.join([x.get('text','') for x in report.get('blocks',{}).get('actions',[])])}</p>
