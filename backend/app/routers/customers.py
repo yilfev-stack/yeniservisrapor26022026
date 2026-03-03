@@ -7,6 +7,11 @@ from .common import normalize_doc, now, parse_id
 router = APIRouter(prefix='/api', tags=['customers'])
 
 
+async def _next_customer_code() -> int:
+    latest = await collection('customers').find_one({'customer_code': {'$type': 'number'}}, sort=[('customer_code', -1)])
+    return int((latest or {}).get('customer_code') or 4000) + 1
+
+
 @router.get('/customers')
 async def list_customers():
     items = [normalize_doc(doc) async for doc in collection('customers').find().sort('created_at', -1)]
@@ -15,7 +20,9 @@ async def list_customers():
 
 @router.post('/customers')
 async def create_customer(payload: CustomerIn):
-    doc = payload.model_dump() | {'created_at': now(), 'updated_at': now()}
+    values = payload.model_dump()
+    values['customer_code'] = values.get('customer_code') or await _next_customer_code()
+    doc = values | {'created_at': now(), 'updated_at': now()}
     inserted = await collection('customers').insert_one(doc)
     return {'id': str(inserted.inserted_id)}
 

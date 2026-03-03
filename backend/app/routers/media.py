@@ -1,25 +1,22 @@
-FROM python:3.12-slim
+from datetime import datetime, timezone
+from pathlib import Path
 
-WORKDIR /app
+from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
+from weasyprint import HTML
 
-# WeasyPrint runtime libraries (fixes gobject/pango/cairo load errors)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libcairo2 \
-    libgdk-pixbuf-2.0-0 \
-    libglib2.0-0 \
-    libffi8 \
-    shared-mime-info \
-    fonts-dejavu-core \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY app ./app
-COPY scripts ./scripts
-EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+from app.db import collection
+from app.schemas import ExcelExportOptionsIn, ExportOptionsIn
+from app.storage import (
+    EXPORT_DIR,
+    UPLOAD_DIR,
+    build_thumbnail_and_optimized,
+    local_export_url,
+    local_upload_url,
+    save_original_image,
+    upload_bytes_to_minio,
 )
 from .common import now, parse_id
 
@@ -121,7 +118,7 @@ def _build_pdf_html(report: dict, before: list[dict], after: list[dict], options
         <div>Report No: {report.get('report_no','')} | Revision: {report.get('revision_no',1)} | Language: {options.language}</div>
       </div>
       <h3>General</h3>
-      <p>Customer: {report.get('customer_id','')} | Contact: {report.get('contact_id','')} | Status: {report.get('status','')}</p>
+      <p>Customer: {report.get('customer_name') or report.get('customer_id','')} | Short: {report.get('customer_short_name','-')} | Code: {report.get('customer_code','-')} | Contact: {report.get('contact_id','')} | Status: {report.get('status','')}</p>
       <h3>Complaint</h3><p>{' '.join([x.get('text','') for x in report.get('blocks',{}).get('complaint',[])])}</p>
       <h3>Problems</h3><p>{' '.join([x.get('text','') for x in report.get('blocks',{}).get('problems',[])])}</p>
       <h3>Actions</h3><p>{' '.join([x.get('text','') for x in report.get('blocks',{}).get('actions',[])])}</p>
@@ -153,14 +150,8 @@ async def export_pdf(report_id: str, payload: ExportOptionsIn):
 
     html = _build_pdf_html(report, before, after, payload, company)
     filename = f"{report.get('report_no', report_id)}-{payload.language}.pdf"
-file_path = EXPORT_DIR / filename
-
-try:
-    from weasyprint import HTML  # lazy import keeps backend bootable if system libs missing
-except Exception as exc:
-    raise HTTPException(status_code=500, detail=f'WeasyPrint runtime error: {exc}')
-
-HTML(string=html).write_pdf(file_path)
+    file_path = EXPORT_DIR / filename
+    HTML(string=html).write_pdf(file_path)
 
     export_doc = {
         'report_id': report_id,

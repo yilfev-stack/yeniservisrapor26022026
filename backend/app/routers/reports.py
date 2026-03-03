@@ -36,6 +36,21 @@ def status_meta(current_status: str):
     return {'current_stage': current_status, 'next_allowed': STATUS_FLOW[idx + 1] if idx < len(STATUS_FLOW) - 1 else None, 'timeline': STATUS_FLOW}
 
 
+async def _load_customer_snapshot(customer_id: str | None) -> dict:
+    if not customer_id:
+        return {'customer_code': None, 'customer_short_name': '', 'customer_name': ''}
+    if not customer_id or len(customer_id) != 24:
+        return {'customer_code': None, 'customer_short_name': '', 'customer_name': ''}
+    customer = await collection('customers').find_one({'_id': parse_id(customer_id)})
+    if not customer:
+        return {'customer_code': None, 'customer_short_name': '', 'customer_name': ''}
+    return {
+        'customer_code': customer.get('customer_code'),
+        'customer_short_name': customer.get('short_name') or '',
+        'customer_name': customer.get('name') or '',
+    }
+
+
 @router.get('/reports')
 async def list_reports(
     customer_id: str | None = None,
@@ -49,6 +64,11 @@ async def list_reports(
     model: str | None = None,
     serial_no: str | None = None,
     tag_no: str | None = None,
+    search_type: str | None = None,
+    search_value: str | None = None,
+    status_bucket: str | None = None,
+    sort_by: str | None = None,
+    sort_order: str | None = None,
 ):
     query = {}
     if customer_id:
@@ -76,11 +96,38 @@ async def list_reports(
     if tag_no:
         query['products.snapshot_fields.tag_no'] = {'$regex': tag_no, '$options': 'i'}
 
+    if status_bucket == 'pending':
+        query['status'] = {'$nin': ['final_report', 'archived']}
+    if status_bucket == 'completed':
+        query['status'] = {'$in': ['final_report', 'archived']}
+
+    if search_type and search_value:
+        sv = search_value.strip()
+        if search_type == 'tag_no':
+            query['products.snapshot_fields.tag_no'] = {'$regex': sv, '$options': 'i'}
+        elif search_type == 'serial_no':
+            query['products.snapshot_fields.serial_no'] = {'$regex': sv, '$options': 'i'}
+        elif search_type == 'model_no':
+            query['products.snapshot_fields.model'] = {'$regex': sv, '$options': 'i'}
+        elif search_type == 'customer_no' and sv.isdigit():
+            query['customer_code'] = int(sv)
+
     items = []
     async for doc in collection('reports').find(query).sort('created_at', -1):
         doc['status_meta'] = status_meta(doc.get('status', 'draft'))
         doc['actions'] = _normalize_actions(doc.get('actions', []))
         items.append(normalize_doc(doc))
+
+    reverse = (sort_order or 'asc').lower() == 'desc'
+    if sort_by == 'customer_short_name':
+        items.sort(key=lambda x: (x.get('customer_short_name') or '').lower(), reverse=reverse)
+    elif sort_by == 'customer_code':
+        items.sort(key=lambda x: int(x.get('customer_code') or 0), reverse=reverse)
+    elif sort_by == 'arrival_date':
+        items.sort(key=lambda x: str(x.get('arrival_date') or ''), reverse=reverse)
+    elif sort_by == 'shipping_date':
+        items.sort(key=lambda x: str(x.get('shipping_date') or ''), reverse=reverse)
+
     return items
 
 
@@ -88,6 +135,7 @@ async def list_reports(
 async def create_report(payload: ReportIn):
     ts = now()
     values = payload.model_dump()
+    values |= await _load_customer_snapshot(values.get('customer_id'))
     values['actions'] = _normalize_actions(values.get('actions', []))
     doc = values | {
         'report_no': generate_report_no(ts),
@@ -116,6 +164,7 @@ async def get_report(report_id: str):
 @router.put('/reports/{report_id}')
 async def update_report(report_id: str, payload: ReportIn):
     base = payload.model_dump()
+    base |= await _load_customer_snapshot(base.get('customer_id'))
     base['actions'] = _normalize_actions(base.get('actions', []))
     values = base | {'updated_at': now(), 'updated_by': payload.responsible_user}
     await collection('reports').update_one({'_id': parse_id(report_id)}, {'$set': values})
@@ -234,6 +283,11 @@ async def list_issuer_reports(
     model: str | None = None,
     serial_no: str | None = None,
     tag_no: str | None = None,
+    search_type: str | None = None,
+    search_value: str | None = None,
+    status_bucket: str | None = None,
+    sort_by: str | None = None,
+    sort_order: str | None = None,
 ):
     return await list_reports(
         customer_id=customer_id,

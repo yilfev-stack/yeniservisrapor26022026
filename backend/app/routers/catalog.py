@@ -26,6 +26,13 @@ async def create_model(brand_id: str, payload: ModelIn):
     return {'id': str(inserted.inserted_id)}
 
 
+
+
+@router.get('/models')
+async def list_models(brand_id: str | None = None):
+    query = {'brand_id': brand_id} if brand_id else {}
+    return [normalize_doc(doc) async for doc in collection('models').find(query).sort('name', 1)]
+
 @router.get('/models/{model_id}')
 async def get_model(model_id: str):
     return normalize_doc(await collection('models').find_one({'_id': parse_id(model_id)}))
